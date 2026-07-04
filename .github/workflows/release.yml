@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (must match manifest.json version, e.g. 0.1.0-beta.1)"
+        required: true
+        default: "0.1.0-beta.1"
 
 permissions:
   contents: write
@@ -28,14 +34,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
+          # Tag comes from the pushed tag ref, or the workflow_dispatch input.
+          tag="${{ github.event.inputs.tag }}"
+          if [ -z "$tag" ]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
+
           # Mark semver pre-release tags (those containing a hyphen, e.g.
           # 0.1.0-beta.1) as GitHub pre-releases; plain x.y.z tags are stable.
           prerelease=""
           case "$tag" in
             *-*) prerelease="--prerelease" ;;
           esac
+
+          # When dispatched manually the tag does not exist yet; gh creates it
+          # on the current commit via --target.
           gh release create "$tag" \
+            --target "$GITHUB_SHA" \
             --title="$tag" \
             --generate-notes \
             $prerelease \
