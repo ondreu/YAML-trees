@@ -1,0 +1,11 @@
+# build output
+main.js
+*.js.map
+tests/*.cjs
+
+# dependencies
+node_modules/
+package-lock.json
+
+# editor / os
+.DS_Store

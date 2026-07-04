@@ -1,0 +1,9 @@
+{
+	"id": "yaml-trees",
+	"name": "YAML Trees",
+	"version": "0.1.0",
+	"minAppVersion": "1.5.0",
+	"description": "View, create and edit YAML files as interactive tables, forms or raw source. Deterministic, git-diff-friendly output. Built for bills of materials, useful for any YAML.",
+	"author": "ondreu",
+	"isDesktopOnly": false
+}

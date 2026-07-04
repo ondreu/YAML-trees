@@ -1,0 +1,31 @@
+{
+	"name": "yaml-trees",
+	"version": "0.1.0",
+	"description": "Obsidian plugin to view, create and edit YAML files as interactive tables, forms or raw source.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"test": "esbuild tests/model.test.ts --bundle --platform=node --format=cjs --outfile=tests/model.test.cjs && node --test tests/model.test.cjs",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [
+		"obsidian",
+		"yaml",
+		"database",
+		"bom"
+	],
+	"author": "ondreu",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^20.11.0",
+		"builtin-modules": "^3.3.0",
+		"esbuild": "0.20.0",
+		"obsidian": "latest",
+		"tslib": "2.6.2",
+		"typescript": "5.3.3"
+	},
+	"dependencies": {
+		"yaml": "^2.4.1"
+	}
+}

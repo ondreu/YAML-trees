@@ -1,0 +1,370 @@
+/*
+ * YAML Trees styles. Everything is scoped under .yaml-trees-view and uses
+ * Obsidian's own CSS variables, so the UI matches light/dark and community
+ * themes automatically.
+ */
+
+.yaml-trees-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+}
+
+/* --- Mode switcher ----------------------------------------------------- */
+
+.yaml-trees-view .yt-modebar {
+	display: flex;
+	gap: var(--size-4-1);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex: 0 0 auto;
+}
+
+.yaml-trees-view .yt-mode-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) var(--size-4-2);
+	background: transparent;
+	border: none;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	cursor: pointer;
+	box-shadow: none;
+}
+
+.yaml-trees-view .yt-mode-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.yaml-trees-view .yt-mode-btn.is-active {
+	background: var(--background-modifier-active-hover);
+	color: var(--text-accent);
+}
+
+.yaml-trees-view .yt-btn-icon {
+	display: inline-flex;
+	align-items: center;
+}
+
+.yaml-trees-view .yt-btn-icon svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+/* --- Editor area ------------------------------------------------------- */
+
+.yaml-trees-view .yt-editor {
+	flex: 1 1 auto;
+	overflow: auto;
+	padding: var(--size-4-3);
+}
+
+/* --- Toolbar / buttons ------------------------------------------------- */
+
+.yaml-trees-view .yt-toolbar {
+	display: flex;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.yaml-trees-view .yt-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) var(--size-4-2);
+	background: var(--interactive-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
+}
+
+.yaml-trees-view .yt-btn:hover {
+	background: var(--interactive-hover);
+}
+
+.yaml-trees-view .yt-btn-subtle {
+	background: transparent;
+	color: var(--text-muted);
+	margin-top: var(--size-4-2);
+}
+
+.yaml-trees-view .yt-btn-subtle:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+/* --- Table ------------------------------------------------------------- */
+
+.yaml-trees-view .yt-table-wrapper {
+	overflow: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.yaml-trees-view .yt-table {
+	border-collapse: collapse;
+	width: 100%;
+	font-variant-numeric: tabular-nums;
+}
+
+.yaml-trees-view .yt-table th,
+.yaml-trees-view .yt-table td {
+	border-right: 1px solid var(--background-modifier-border);
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 0;
+	text-align: left;
+	vertical-align: middle;
+}
+
+.yaml-trees-view .yt-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--background-secondary);
+	padding: var(--size-4-1) var(--size-4-2);
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+	white-space: nowrap;
+	cursor: context-menu;
+}
+
+.yaml-trees-view .yt-row-handle {
+	width: 1.6em;
+	min-width: 1.6em;
+	text-align: center;
+	color: var(--text-faint);
+	background: var(--background-secondary);
+	cursor: pointer;
+}
+
+.yaml-trees-view .yt-row-handle svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+	vertical-align: middle;
+}
+
+.yaml-trees-view .yt-td {
+	background: var(--background-primary);
+}
+
+.yaml-trees-view tbody tr:hover .yt-td,
+.yaml-trees-view .yt-table tbody tr:hover .yt-td {
+	background: var(--background-modifier-hover);
+}
+
+.yaml-trees-view .yt-cell-input {
+	width: 100%;
+	min-width: 6em;
+	box-sizing: border-box;
+	border: none;
+	background: transparent;
+	color: var(--text-normal);
+	padding: var(--size-4-1) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	box-shadow: none;
+	border-radius: 0;
+}
+
+.yaml-trees-view .yt-cell-input:focus {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+}
+
+.yaml-trees-view .yt-cell-empty {
+	color: var(--text-faint);
+}
+
+.yaml-trees-view .yt-cell-checkbox {
+	margin: var(--size-4-1) var(--size-4-2);
+}
+
+.yaml-trees-view .yt-cell-nested {
+	display: inline-block;
+	padding: var(--size-4-1) var(--size-4-2);
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+/* --- Form -------------------------------------------------------------- */
+
+.yaml-trees-view .yt-form {
+	max-width: 46rem;
+}
+
+.yaml-trees-view .yt-field {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-1) 0;
+}
+
+.yaml-trees-view .yt-field-label {
+	flex: 0 0 12rem;
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.yaml-trees-view .yt-field-input {
+	flex: 1 1 auto;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-normal);
+	padding: var(--size-4-1) var(--size-4-2);
+}
+
+.yaml-trees-view .yt-group {
+	border-left: 2px solid var(--background-modifier-border);
+	margin: var(--size-4-1) 0;
+	padding-left: var(--size-4-2);
+}
+
+.yaml-trees-view .yt-group-header {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) 0;
+	cursor: pointer;
+	user-select: none;
+}
+
+.yaml-trees-view .yt-group-toggle {
+	display: inline-flex;
+	color: var(--text-muted);
+}
+
+.yaml-trees-view .yt-group-toggle svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+.yaml-trees-view .yt-group-label {
+	font-weight: var(--font-semibold);
+}
+
+.yaml-trees-view .yt-group-kind {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+.yaml-trees-view .yt-group.is-collapsed .yt-group-body {
+	display: none;
+}
+
+.yaml-trees-view .yt-icon-btn {
+	display: inline-flex;
+	margin-left: auto;
+	color: var(--text-faint);
+	cursor: pointer;
+	padding: var(--size-4-1);
+	border-radius: var(--radius-s);
+}
+
+.yaml-trees-view .yt-icon-btn:hover {
+	color: var(--text-error);
+	background: var(--background-modifier-hover);
+}
+
+.yaml-trees-view .yt-icon-btn svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+/* --- Source ------------------------------------------------------------ */
+
+.yaml-trees-view .yt-source {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.yaml-trees-view .yt-source-input {
+	flex: 1 1 auto;
+	width: 100%;
+	box-sizing: border-box;
+	resize: none;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	line-height: var(--line-height-normal);
+	tab-size: 2;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: var(--size-4-2);
+}
+
+.yaml-trees-view .yt-source.has-error .yt-source-input {
+	border-color: var(--text-error);
+}
+
+.yaml-trees-view .yt-source-error {
+	margin-bottom: var(--size-4-2);
+	padding: var(--size-4-2);
+	border-radius: var(--radius-s);
+	background: var(--background-modifier-error);
+	color: var(--text-error);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+}
+
+/* --- Empty & error states --------------------------------------------- */
+
+.yaml-trees-view .yt-empty {
+	padding: var(--size-4-6) var(--size-4-3);
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.yaml-trees-view .yt-empty-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+	margin-bottom: var(--size-4-1);
+}
+
+.yaml-trees-view .yt-empty-subtitle {
+	font-size: var(--font-ui-smaller);
+}
+
+.yaml-trees-view .yt-parse-error {
+	margin: var(--size-4-4);
+	padding: var(--size-4-3);
+	border: 1px solid var(--text-error);
+	border-radius: var(--radius-m);
+	background: var(--background-modifier-error);
+}
+
+.yaml-trees-view .yt-parse-error-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-error);
+	margin-bottom: var(--size-4-2);
+}
+
+.yaml-trees-view .yt-parse-error-body {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-normal);
+	margin-bottom: var(--size-4-2);
+	white-space: pre-wrap;
+}
+
+.yaml-trees-view .yt-parse-error-hint {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+/* --- Settings ---------------------------------------------------------- */
+
+.yt-settings-template {
+	width: 100%;
+	font-family: var(--font-monospace);
+}
