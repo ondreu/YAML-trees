@@ -18,6 +18,7 @@ function makeHost(initial: unknown, renderer?: () => TableRenderer): TestHost {
 	let rerenders = 0;
 	const host: TestHost = {
 		app: {} as never,
+		baseName: () => "test",
 		getData: () => data,
 		replaceData: (v: unknown) => {
 			data = v;

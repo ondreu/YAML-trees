@@ -4,6 +4,8 @@ main.js
 tests/*.cjs
 demo/demo.js
 demo/*.png
+demo/*.html
+demo/*.xlsx
 
 # dependencies
 node_modules/

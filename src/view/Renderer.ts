@@ -7,6 +7,8 @@ import { App } from "obsidian";
 
 export interface EditorHost {
 	readonly app: App;
+	/** Base name of the file being edited (for breadcrumbs / export names). */
+	baseName(): string;
 	/** Current model value. */
 	getData(): unknown;
 	/** Replace the whole model, persist, and re-render the active renderer. */

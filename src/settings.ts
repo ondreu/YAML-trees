@@ -9,13 +9,30 @@ export interface YamlTreesSettings {
 	newFileBaseName: string;
 	/** YAML content written into a newly created database. */
 	newFileTemplate: string;
+	/** Declarative lint rules (YAML) applied to record tables. */
+	lintRules: string;
 }
 
 export const DEFAULT_SETTINGS: YamlTreesSettings = {
 	defaultView: "table",
 	newFileBaseName: "Untitled",
 	newFileTemplate: "- name: Example item\n  quantity: 1\n",
+	lintRules: "",
 };
+
+const LINT_RULES_EXAMPLE = [
+	"# Example rules (YAML):",
+	"# nonEmpty: true",
+	"# rules:",
+	"#   - column: name",
+	"#     required: true",
+	"#     unique: true",
+	"#   - column: quantity",
+	"#     type: integer",
+	"#     min: 0",
+	"#   - column: status",
+	"#     enum: [open, done]",
+].join("\n");
 
 export class YamlTreesSettingTab extends PluginSettingTab {
 	private readonly plugin: YamlTreesPlugin;
@@ -32,7 +49,7 @@ export class YamlTreesSettingTab extends PluginSettingTab {
 		// Version line so it is easy to confirm which build is installed.
 		containerEl.createEl("p", {
 			cls: "yt-settings-version",
-			text: `YAML Trees v${this.plugin.manifest.version}`,
+			text: `YAML Databases v${this.plugin.manifest.version}`,
 		});
 
 		new Setting(containerEl)
@@ -76,6 +93,23 @@ export class YamlTreesSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				text.inputEl.rows = 6;
+				text.inputEl.addClass("yt-settings-template");
+			});
+
+		new Setting(containerEl)
+			.setName("Lint rules")
+			.setDesc(
+				"Declarative validation rules in YAML, applied to record tables from the Lint button. Leave empty for built-in checks only."
+			)
+			.addTextArea((text) => {
+				text
+					.setPlaceholder(LINT_RULES_EXAMPLE)
+					.setValue(this.plugin.settings.lintRules)
+					.onChange(async (value) => {
+						this.plugin.settings.lintRules = value;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.rows = 10;
 				text.inputEl.addClass("yt-settings-template");
 			});
 	}

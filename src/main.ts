@@ -15,7 +15,7 @@ export default class YamlTreesPlugin extends Plugin {
 
 		// Log the running version so the console makes it obvious which build is
 		// active (useful when checking whether a beta update actually landed).
-		console.log(`YAML Trees ${this.manifest.version} loaded`);
+		console.log(`YAML Databases ${this.manifest.version} loaded`);
 
 		// Custom view for editing YAML, registered for the yaml/yml extensions so
 		// clicking such a file in the explorer opens it here in the main area.
@@ -27,7 +27,7 @@ export default class YamlTreesPlugin extends Plugin {
 			// opened explicitly via the command below.
 			console.warn("YAML Trees: could not register extensions", e);
 			new Notice(
-				"YAML Trees: another plugin already handles .yaml/.yml files. Use the command \"Open current file in YAML Trees\" to open them here.",
+				"YAML Databases: another plugin already handles .yaml/.yml files. Use the command \"Open current file in YAML Databases\" to open them here.",
 				10000
 			);
 		}
@@ -59,7 +59,7 @@ export default class YamlTreesPlugin extends Plugin {
 		// may route elsewhere.
 		this.addCommand({
 			id: "open-in-yaml-trees",
-			name: "Open current file in YAML Trees",
+			name: "Open current file in YAML Databases",
 			checkCallback: (checking: boolean) => {
 				const file = this.app.workspace.getActiveFile();
 				const eligible = !!file && YAML_EXTENSIONS.includes(file.extension);
@@ -96,7 +96,7 @@ export default class YamlTreesPlugin extends Plugin {
 			await this.openInYamlView(file);
 		} catch (e) {
 			new Notice(
-				`YAML Trees: could not create file: ${e instanceof Error ? e.message : String(e)}`
+				`YAML Databases: could not create file: ${e instanceof Error ? e.message : String(e)}`
 			);
 		}
 	}

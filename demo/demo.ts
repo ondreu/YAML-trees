@@ -71,6 +71,7 @@ function makeHost(initial: unknown, factory: () => { render(): void }): EditorHo
 	let data = initial;
 	return {
 		app: {} as never,
+		baseName: () => "Demo BOM",
 		getData: () => data,
 		replaceData: (v: unknown) => {
 			data = v;
@@ -119,9 +120,17 @@ installObsidianDomHelpers();
 const app = document.body.createDiv();
 app.id = "app";
 
-mountView(app, "Table view (bill of materials)", "table", [
-	{ part: "M3x8 bolt", qty: 12, supplier: "Acme", inStock: true },
-	{ part: "M3 nut", qty: 12, supplier: "Acme", inStock: true },
+mountView(app, "Table view (bill of materials, with a subassembly)", "table", [
+	{
+		part: "Main assembly",
+		qty: 1,
+		supplier: "In-house",
+		inStock: true,
+		components: [
+			{ part: "M3x8 bolt", qty: 12 },
+			{ part: "M3 nut", qty: 12 },
+		],
+	},
 	{ part: "007 washer", qty: 24, supplier: "Bolts Ltd", inStock: false },
 	{ part: "PCB v2", qty: 1, supplier: "JLC", inStock: true },
 ]);

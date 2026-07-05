@@ -1,28 +1,42 @@
-# YAML Trees
+# YAML Databases
 
-An [Obsidian](https://obsidian.md) plugin to **view, create and edit YAML files**
-through a clean, native-feeling UI — as an interactive **table**, a **form**, or
-raw **source**.
+An [Obsidian](https://obsidian.md) plugin to **view, create and edit YAML files
+as interactive databases** — through a clean, native-feeling UI as a
+**spreadsheet**, a **form**, or raw **source**.
 
 It was built for maintaining bills of materials (kusovníky) whose changes are
 tracked with `git diff`, so its output is **deterministic and diff-friendly**: a
 single edit produces a single-line change. It works just as well for any YAML.
 
+> The plugin **id** is still `yaml-trees` (matching the current repo) so existing
+> installs keep working; the display name is **YAML Databases**.
+
 ## Features
 
 - **Open `.yaml` / `.yml` files in the main area** by clicking them in the file
-  explorer — they open in the YAML Trees editor, not as plain text.
-- **Three switchable views** (toggle in the view header):
+  explorer. If another plugin owns those extensions, use the command
+  *Open current file in YAML Databases*.
+- **Three switchable views** (toggle in the toolbar):
   - **Table** — a spreadsheet for a list of records (rows x columns). Row
-    numbers, a sticky header, inline cell and column-name editing, and
-    keyboard navigation (Tab / Enter / arrow keys move between cells; edits
-    never lose focus). Add rows and columns from the grid; right-click a row
-    number or column header to insert, move, duplicate or delete. The primary
-    view for BOMs.
+    numbers, sticky header, inline cell and column-name editing, keyboard
+    navigation (Tab / Enter / arrows), **resizable columns**, **drag-to-reorder**
+    rows and columns, and **Excel-style range selection with copy/paste** (TSV).
+    Right-click a row number, column header, or cell for insert / move /
+    duplicate / delete / clear and per-cell **type** changes.
   - **Form** — a collapsible, labelled tree for maps and nested data.
   - **Source** — the raw YAML with live syntax validation as an escape hatch.
+- **Sub-databases (subassemblies)** — a cell can hold a nested list of records;
+  click it to **drill in**, with a breadcrumb to navigate back out.
+- **Cell types** — per cell choose text, number, checkbox, multiline text, list,
+  sub-table, or object (right-click a cell).
+- **Linter** — built-in checks plus your own **declarative YAML rules**
+  (`required`, `unique`, `type`, `min`/`max`, `enum`, `pattern`, `nonEmpty`) set
+  in settings; results show in a panel from the **Lint** button.
+- **Export** — **CSV**, **XLSX** (no dependency), and a **self-contained HTML**
+  file that browses the database (with drill-down, search, and its own
+  CSV/XLSX download) offline, from the toolbar.
 - **Create a new database** from the folder context menu (*New YAML database*),
-  the command palette (*Create new YAML database*), or the ribbon icon.
+  the command palette, or the ribbon icon.
 - **Git-friendly output** — block style, one value per line, stable key order,
   no line wrapping. Editing one cell changes one line in the diff.
 - **Theme-native UI** — styled entirely with Obsidian's own CSS variables, so it

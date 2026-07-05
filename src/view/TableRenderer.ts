@@ -1,46 +1,130 @@
-import { Menu } from "obsidian";
+import { Menu, setIcon } from "obsidian";
 import { Renderer } from "./Renderer";
 import { collectColumns, isPlainObject } from "../model/shape";
-import { coerceScalar, formatScalar, isEditableScalar } from "../model/coerce";
+import { coerceScalar, formatScalar } from "../model/coerce";
+import {
+	cellType,
+	convertCell,
+	isSubtable,
+	cellTypeLabel,
+	type CellType,
+} from "../model/cells";
+import {
+	moveItem,
+	reorderColumns,
+	rangeToTsv,
+	parseClipboardTable,
+	applyPaste,
+	nextColumnName,
+	blankRow,
+} from "../model/records";
+import { MultilineModal } from "./MultilineModal";
 
-// A spreadsheet-style editor for a list of records: row numbers down the side,
-// a sticky header of column names, one editable cell per field. It behaves like
-// a real sheet — Tab/Enter/arrows move between cells and edits never re-render
-// the grid (so focus is never lost while typing).
-//
-// The model is a `Record<string, unknown>[]`. Columns are the ordered union of
-// keys across rows; a missing key renders as an empty cell.
+// Spreadsheet editor for a list of records. Supports drill-down into nested
+// record lists (sub-databases / subassemblies), per-cell types, resizable and
+// draggable columns, draggable rows, and Excel-style range selection with
+// TSV copy/paste.
 
-/** Cell to focus after the next render (set before a structural change). */
-interface FocusTarget {
+interface Cell {
+	r: number;
+	c: number;
+}
+
+interface DrillStep {
 	row: number;
-	col: number;
-	/** Put the caret at the end and select nothing. */
-	select?: boolean;
+	col: string;
+	label: string;
+}
+
+function isTableArray(value: unknown): value is Record<string, unknown>[] {
+	return Array.isArray(value) && value.every(isPlainObject);
 }
 
 export class TableRenderer extends Renderer {
-	private pendingFocus: FocusTarget | null = null;
+	/** Drill path from the root database into a nested sub-table. */
+	private path: DrillStep[] = [];
+	/** Column pixel widths by column name (session-persistent). */
+	private widths = new Map<string, number>();
+	/** Selection anchor and focus (the active cell). */
+	private anchor: Cell | null = null;
+	private active: Cell | null = null;
+	/** Focus to restore after the next render (structural changes). */
+	private pendingFocus: Cell | null = null;
+	private pendingHeaderFocus: number | null = null;
+
+	private cellEls: HTMLElement[][] = [];
+	private scrollEl: HTMLElement | null = null;
 
 	render(): void {
 		this.container.empty();
-		const data = this.host.getData();
+		this.cellEls = [];
 
-		if (!Array.isArray(data) || (data.length > 0 && !data.every(isPlainObject))) {
-			this.renderNotRecords(data);
+		const level = this.resolveLevel();
+		this.renderBreadcrumb(level !== null);
+
+		if (level === null) {
+			this.renderNotRecords();
 			return;
 		}
 
-		const records = data as Record<string, unknown>[];
+		const records = level;
 		const columns = collectColumns(records);
 
 		const scroll = this.container.createDiv({ cls: "yt-sheet-scroll" });
+		scroll.tabIndex = 0;
+		this.scrollEl = scroll;
 		const table = scroll.createEl("table", { cls: "yt-sheet" });
 
 		this.renderHead(table, records, columns);
 		this.renderBody(table, records, columns);
 
-		this.applyPendingFocus();
+		this.wireClipboard(scroll, records, columns);
+		this.applyPendingFocus(columns);
+		this.paintSelection();
+	}
+
+	// --- Drill navigation ------------------------------------------------
+
+	private resolveLevel(): Record<string, unknown>[] | null {
+		const root = this.host.getData();
+		if (!isTableArray(root)) {
+			return null;
+		}
+		let cur: Record<string, unknown>[] = root;
+		const validPath: DrillStep[] = [];
+		for (const step of this.path) {
+			const rec = cur[step.row];
+			const next = rec ? rec[step.col] : undefined;
+			if (!isTableArray(next)) {
+				break; // Path broke (rows deleted etc.); stop here.
+			}
+			cur = next;
+			validPath.push(step);
+		}
+		this.path = validPath;
+		return cur;
+	}
+
+	private renderBreadcrumb(haveTable: boolean): void {
+		if (this.path.length === 0 && !haveTable) {
+			return;
+		}
+		const bar = this.container.createDiv({ cls: "yt-breadcrumb" });
+		const root = bar.createSpan({ cls: "yt-crumb", text: this.host.baseName() });
+		root.addEventListener("click", () => {
+			this.path = [];
+			this.clearSelection();
+			this.host.rerender();
+		});
+		this.path.forEach((step, i) => {
+			bar.createSpan({ cls: "yt-crumb-sep", text: "/" });
+			const crumb = bar.createSpan({ cls: "yt-crumb", text: step.label });
+			crumb.addEventListener("click", () => {
+				this.path = this.path.slice(0, i + 1);
+				this.clearSelection();
+				this.host.rerender();
+			});
+		});
 	}
 
 	// --- Header ----------------------------------------------------------
@@ -52,22 +136,27 @@ export class TableRenderer extends Renderer {
 	): void {
 		const thead = table.createEl("thead");
 		const tr = thead.createEl("tr");
-
-		// Top-left corner cell (aligns with the row-number gutter).
 		tr.createEl("th", { cls: "yt-corner" });
 
 		columns.forEach((column, colIndex) => {
 			const th = tr.createEl("th", { cls: "yt-colhead" });
+			const width = this.widths.get(column);
+			if (width) {
+				th.style.width = `${width}px`;
+			}
+
+			const grip = th.createSpan({ cls: "yt-col-grip" });
+			setIcon(grip, "grip-vertical");
+			grip.setAttr("draggable", "true");
+			grip.setAttr("aria-label", "Drag to reorder column");
+			this.wireColumnDrag(grip, columns, colIndex);
+
 			const label = th.createEl("input", {
 				cls: "yt-colhead-input",
-				attr: { value: column, spellcheck: "false" },
+				attr: { spellcheck: "false" },
 			});
 			label.value = column;
-
-			// Rename on commit; ignore no-ops and collisions.
-			label.addEventListener("blur", () =>
-				this.commitRename(column, label.value)
-			);
+			label.addEventListener("blur", () => this.renameColumn(column, label.value));
 			label.addEventListener("keydown", (evt) => {
 				if (evt.key === "Enter") {
 					evt.preventDefault();
@@ -77,12 +166,15 @@ export class TableRenderer extends Renderer {
 					label.blur();
 				}
 			});
+
 			th.addEventListener("contextmenu", (evt) =>
 				this.openColumnMenu(evt, column, colIndex, columns)
 			);
+
+			const handle = th.createSpan({ cls: "yt-col-resize" });
+			this.wireColumnResize(handle, th, column);
 		});
 
-		// "Add column" affordance at the right edge.
 		const addTh = tr.createEl("th", { cls: "yt-addcol", text: "+" });
 		addTh.setAttr("aria-label", "Add column");
 		addTh.addEventListener("click", () => this.addColumn(records, columns));
@@ -98,27 +190,29 @@ export class TableRenderer extends Renderer {
 		const tbody = table.createEl("tbody");
 
 		records.forEach((record, rowIndex) => {
+			this.cellEls[rowIndex] = [];
 			const tr = tbody.createEl("tr");
 
 			const gutter = tr.createEl("th", {
 				cls: "yt-rownum",
 				text: String(rowIndex + 1),
 			});
+			gutter.setAttr("draggable", "true");
 			gutter.setAttr("aria-label", `Row ${rowIndex + 1}`);
+			this.wireRowDrag(gutter, records, rowIndex);
 			gutter.addEventListener("click", (evt) =>
-				this.openRowMenu(evt, rowIndex, records)
+				this.openRowMenu(evt, records, rowIndex)
 			);
 
 			columns.forEach((column, colIndex) => {
 				const td = tr.createEl("td", { cls: "yt-cell" });
-				this.renderCell(td, record, column, rowIndex, colIndex, columns.length);
+				this.cellEls[rowIndex][colIndex] = td;
+				this.renderCell(td, record, column, rowIndex, colIndex, records);
 			});
 
-			// Trailing spacer cell so the "+ column" column has a body.
 			tr.createEl("td", { cls: "yt-cell yt-cell-spacer" });
 		});
 
-		// "Add row" footer.
 		const footer = tbody.createEl("tr", { cls: "yt-addrow" });
 		const cell = footer.createEl("td", {
 			cls: "yt-addrow-cell",
@@ -134,218 +228,439 @@ export class TableRenderer extends Renderer {
 		column: string,
 		rowIndex: number,
 		colIndex: number,
-		colCount: number
+		records: Record<string, unknown>[]
 	): void {
 		const value = record[column];
+		const type = cellType(value);
 
-		if (!isEditableScalar(value)) {
+		td.addEventListener("mousedown", (evt) => this.onCellMouseDown(evt, rowIndex, colIndex));
+		td.addEventListener("contextmenu", (evt) =>
+			this.openCellMenu(evt, record, column, rowIndex, colIndex, records)
+		);
+
+		if (isSubtable(value)) {
+			const drill = td.createEl("button", { cls: "yt-drill" });
+			setIcon(drill.createSpan({ cls: "yt-btn-icon" }), "table");
+			drill.createSpan({ text: `${value.length} rows` });
+			drill.addEventListener("click", () =>
+				this.drillInto(rowIndex, column, records)
+			);
+			return;
+		}
+
+		if (type === "object") {
 			td.addClass("yt-cell-readonly");
 			td.createSpan({ cls: "yt-cell-nested", text: formatScalar(value) });
 			return;
 		}
 
-		if (typeof value === "boolean") {
-			const box = td.createEl("input", {
-				type: "checkbox",
-				cls: "yt-cell-checkbox",
+		if (type === "list") {
+			const input = this.makeCellInput(td, rowIndex, colIndex);
+			input.value = (value as unknown[]).map((v) => formatScalar(v)).join(", ");
+			input.addClass("yt-cell-list");
+			input.addEventListener("change", () => {
+				record[column] = input.value
+					.split(",")
+					.map((s) => coerceScalar(s.trim()))
+					.filter((_, i, arr) => !(arr.length === 1 && input.value.trim() === ""));
+				this.host.touch();
 			});
-			box.checked = value;
+			return;
+		}
+
+		if (type === "multiline") {
+			const input = this.makeCellInput(td, rowIndex, colIndex);
+			input.value = String(value).replace(/\n/g, " ");
+			input.readOnly = true;
+			input.addClass("yt-cell-multiline");
+			input.addEventListener("dblclick", () =>
+				this.editMultiline(record, column, rowIndex, colIndex)
+			);
+			return;
+		}
+
+		if (type === "boolean") {
+			const box = td.createEl("input", { type: "checkbox", cls: "yt-cell-checkbox" });
+			box.checked = value as boolean;
 			box.dataset.row = String(rowIndex);
 			box.dataset.col = String(colIndex);
 			box.addEventListener("change", () => {
 				record[column] = box.checked;
 				this.host.touch();
 			});
-			this.wireNavigation(box, rowIndex, colIndex, colCount);
+			this.wireCellKeys(box, rowIndex, colIndex);
 			return;
 		}
 
+		const input = this.makeCellInput(td, rowIndex, colIndex);
+		input.value = formatScalar(value);
+		input.addEventListener("change", () => {
+			record[column] = coerceScalar(input.value);
+			this.host.touch();
+		});
+	}
+
+	private makeCellInput(
+		td: HTMLElement,
+		rowIndex: number,
+		colIndex: number
+	): HTMLInputElement {
 		const input = td.createEl("input", {
 			type: "text",
 			cls: "yt-cell-input",
 			attr: { spellcheck: "false" },
 		});
-		input.value = formatScalar(value);
 		input.dataset.row = String(rowIndex);
 		input.dataset.col = String(colIndex);
-
-		// Commit on change only; never re-render here, so typing keeps focus.
-		input.addEventListener("change", () => {
-			record[column] = coerceScalar(input.value);
-			this.host.touch();
-		});
-		this.wireNavigation(input, rowIndex, colIndex, colCount);
+		input.addEventListener("focus", () => this.setActive(rowIndex, colIndex));
+		this.wireCellKeys(input, rowIndex, colIndex);
+		return input;
 	}
 
-	// --- Keyboard navigation --------------------------------------------
+	// --- Selection & keyboard -------------------------------------------
 
-	private wireNavigation(
-		el: HTMLElement,
-		rowIndex: number,
-		colIndex: number,
-		colCount: number
-	): void {
+	private setActive(r: number, c: number): void {
+		this.active = { r, c };
+		this.anchor = { r, c };
+		this.paintSelection();
+	}
+
+	private clearSelection(): void {
+		this.active = null;
+		this.anchor = null;
+	}
+
+	private onCellMouseDown(evt: MouseEvent, r: number, c: number): void {
+		if (evt.shiftKey && this.anchor) {
+			// Extend the selection without stealing edit focus.
+			evt.preventDefault();
+			this.active = { r, c };
+			this.paintSelection();
+		}
+	}
+
+	private wireCellKeys(el: HTMLElement, r: number, c: number): void {
 		el.addEventListener("keydown", (evt: KeyboardEvent) => {
 			switch (evt.key) {
 				case "Enter":
 					evt.preventDefault();
-					this.moveFocus(rowIndex + (evt.shiftKey ? -1 : 1), colIndex);
+					this.focusCell(r + (evt.shiftKey ? -1 : 1), c);
 					break;
 				case "ArrowDown":
 					evt.preventDefault();
-					this.moveFocus(rowIndex + 1, colIndex);
+					this.focusCell(r + 1, c);
 					break;
 				case "ArrowUp":
 					evt.preventDefault();
-					this.moveFocus(rowIndex - 1, colIndex);
+					this.focusCell(r - 1, c);
 					break;
 				case "Tab":
-					// Let the browser handle Tab, but wrap at row ends by nudging
-					// focus to the next/previous row's edge cell.
-					if (!evt.shiftKey && colIndex === colCount - 1) {
+					if (!evt.shiftKey) {
 						evt.preventDefault();
-						this.moveFocus(rowIndex + 1, 0);
-					} else if (evt.shiftKey && colIndex === 0) {
+						this.focusCell(r, c + 1) || this.focusCell(r + 1, 0);
+					} else {
 						evt.preventDefault();
-						this.moveFocus(rowIndex - 1, colCount - 1);
+						this.focusCell(r, c - 1);
 					}
 					break;
 				case "Escape":
-					(el as HTMLInputElement).blur();
+					(el as HTMLInputElement).blur?.();
 					break;
 			}
 		});
 	}
 
-	private moveFocus(row: number, col: number): void {
-		const target = this.container.querySelector<HTMLInputElement>(
-			`[data-row="${row}"][data-col="${col}"]`
+	private focusCell(r: number, c: number): boolean {
+		const target = this.scrollEl?.querySelector<HTMLInputElement>(
+			`[data-row="${r}"][data-col="${c}"]`
 		);
-		if (target) {
-			target.focus();
-			if (target.type === "text") {
-				target.select();
+		if (!target) {
+			return false;
+		}
+		target.focus();
+		if (target.type === "text") {
+			target.select();
+		}
+		return true;
+	}
+
+	private paintSelection(): void {
+		for (const row of this.cellEls) {
+			for (const td of row ?? []) {
+				td?.removeClass("is-selected", "is-active");
 			}
 		}
+		if (!this.active || !this.anchor) {
+			return;
+		}
+		const r1 = Math.min(this.anchor.r, this.active.r);
+		const r2 = Math.max(this.anchor.r, this.active.r);
+		const c1 = Math.min(this.anchor.c, this.active.c);
+		const c2 = Math.max(this.anchor.c, this.active.c);
+		for (let r = r1; r <= r2; r++) {
+			for (let c = c1; c <= c2; c++) {
+				this.cellEls[r]?.[c]?.addClass("is-selected");
+			}
+		}
+		this.cellEls[this.active.r]?.[this.active.c]?.addClass("is-active");
+	}
+
+	// --- Clipboard -------------------------------------------------------
+
+	private wireClipboard(
+		scroll: HTMLElement,
+		records: Record<string, unknown>[],
+		columns: string[]
+	): void {
+		scroll.addEventListener("copy", (evt: ClipboardEvent) => {
+			if (!this.hasRange()) {
+				return; // Single cell: let the input copy its own text.
+			}
+			const tsv = rangeToTsv(
+				records,
+				columns,
+				this.anchor!.r,
+				this.anchor!.c,
+				this.active!.r,
+				this.active!.c
+			);
+			evt.clipboardData?.setData("text/plain", tsv);
+			evt.preventDefault();
+		});
+
+		scroll.addEventListener("paste", (evt: ClipboardEvent) => {
+			const text = evt.clipboardData?.getData("text/plain") ?? "";
+			if (!/[\t\n]/.test(text) || !this.active) {
+				return; // Single value: let the focused input handle it.
+			}
+			evt.preventDefault();
+			const block = parseClipboardTable(text);
+			applyPaste(records, columns, this.active.r, this.active.c, block);
+			this.host.replaceData(this.host.getData());
+		});
+	}
+
+	private hasRange(): boolean {
+		return (
+			!!this.anchor &&
+			!!this.active &&
+			(this.anchor.r !== this.active.r || this.anchor.c !== this.active.c)
+		);
 	}
 
 	// --- Structural operations ------------------------------------------
 
-	/** Seed a brand-new document with one row and one editable column. */
-	private startFirstTable(): void {
-		this.pendingFocus = { row: 0, col: 0 };
-		this.host.replaceData([{ "field 1": null }]);
-	}
-
 	private addRow(records: Record<string, unknown>[], columns: string[]): void {
-		const row: Record<string, unknown> = {};
-		for (const column of columns) {
-			row[column] = null;
-		}
-		records.push(row);
-		this.pendingFocus = { row: records.length - 1, col: 0 };
-		this.host.replaceData(records);
+		records.push(blankRow(columns));
+		this.pendingFocus = { r: records.length - 1, c: 0 };
+		this.host.replaceData(this.host.getData());
 	}
 
-	private addColumn(
-		records: Record<string, unknown>[],
-		columns: string[]
-	): void {
-		const name = this.uniqueColumnName(columns);
+	private addColumn(records: Record<string, unknown>[], columns: string[]): void {
+		const name = nextColumnName(columns);
 		if (records.length === 0) {
 			records.push({ [name]: null });
 		} else {
 			for (const record of records) {
-				record[name] = null;
+				if (!(name in record)) record[name] = null;
 			}
 		}
-		// Focus the new column header for immediate renaming.
-		this.pendingFocus = { row: -1, col: columns.length };
-		this.host.replaceData(records);
+		this.pendingHeaderFocus = columns.length;
+		this.host.replaceData(this.host.getData());
 	}
 
-	private commitRename(from: string, to: string): void {
+	private renameColumn(from: string, to: string): void {
 		const next = to.trim();
 		if (!next || next === from) {
 			return;
 		}
-		const records = this.host.getData() as Record<string, unknown>[];
-		// Reject a rename that would collide with another existing column.
-		const columns = collectColumns(records);
-		if (columns.includes(next)) {
-			// Name already taken; revert by re-rendering with the old name.
+		const records = this.resolveLevel();
+		if (!records) return;
+		if (collectColumns(records).includes(next)) {
 			this.host.rerender();
 			return;
 		}
+		this.widths.set(next, this.widths.get(from) ?? 0);
 		for (const record of records) {
-			if (!(from in record)) {
-				continue;
-			}
+			if (!(from in record)) continue;
 			const rebuilt: Record<string, unknown> = {};
 			for (const key of Object.keys(record)) {
 				rebuilt[key === from ? next : key] = record[key];
 			}
-			this.replaceKeys(record, rebuilt);
+			for (const key of Object.keys(record)) delete record[key];
+			Object.assign(record, rebuilt);
 		}
-		this.host.replaceData(records);
+		this.host.replaceData(this.host.getData());
 	}
 
 	private deleteColumn(column: string): void {
-		const records = this.host.getData() as Record<string, unknown>[];
-		for (const record of records) {
-			delete record[column];
-		}
-		this.host.replaceData(records);
+		const records = this.resolveLevel();
+		if (!records) return;
+		for (const record of records) delete record[column];
+		this.host.replaceData(this.host.getData());
 	}
 
 	private moveColumn(columns: string[], from: number, to: number): void {
-		if (to < 0 || to >= columns.length) {
-			return;
-		}
+		if (to < 0 || to >= columns.length) return;
 		const order = [...columns];
-		const [moved] = order.splice(from, 1);
-		order.splice(to, 0, moved);
-		const records = this.host.getData() as Record<string, unknown>[];
-		for (const record of records) {
-			const rebuilt: Record<string, unknown> = {};
-			for (const key of order) {
-				if (key in record) {
-					rebuilt[key] = record[key];
-				}
+		moveItem(order, from, to);
+		const records = this.resolveLevel();
+		if (!records) return;
+		reorderColumns(records, order);
+		this.pendingHeaderFocus = to;
+		this.host.replaceData(this.host.getData());
+	}
+
+	private insertColumn(columns: string[], at: number): void {
+		const name = nextColumnName(columns);
+		const order = [...columns];
+		order.splice(at, 0, name);
+		const records = this.resolveLevel();
+		if (!records) return;
+		if (records.length === 0) {
+			records.push({ [name]: null });
+		} else {
+			for (const record of records) {
+				const rebuilt: Record<string, unknown> = {};
+				for (const key of order) rebuilt[key] = key === name ? null : record[key];
+				for (const key of Object.keys(record)) delete record[key];
+				Object.assign(record, rebuilt);
 			}
-			for (const key of Object.keys(record)) {
-				if (!(key in rebuilt)) {
-					rebuilt[key] = record[key];
-				}
-			}
-			this.replaceKeys(record, rebuilt);
 		}
-		this.pendingFocus = { row: -1, col: to };
-		this.host.replaceData(records);
+		this.pendingHeaderFocus = at;
+		this.host.replaceData(this.host.getData());
 	}
 
 	private insertRow(records: Record<string, unknown>[], at: number): void {
-		const columns = collectColumns(records);
-		const row: Record<string, unknown> = {};
-		for (const column of columns) {
-			row[column] = null;
-		}
-		records.splice(at, 0, row);
-		this.pendingFocus = { row: at, col: 0 };
-		this.host.replaceData(records);
+		records.splice(at, 0, blankRow(collectColumns(records)));
+		this.pendingFocus = { r: at, c: 0 };
+		this.host.replaceData(this.host.getData());
 	}
 
-	private moveRow(
-		records: Record<string, unknown>[],
-		from: number,
-		to: number
+	private moveRow(records: Record<string, unknown>[], from: number, to: number): void {
+		moveItem(records, from, to);
+		this.host.replaceData(this.host.getData());
+	}
+
+	private drillInto(
+		rowIndex: number,
+		column: string,
+		records: Record<string, unknown>[]
 	): void {
-		if (to < 0 || to >= records.length) {
-			return;
-		}
-		const [moved] = records.splice(from, 1);
-		records.splice(to, 0, moved);
-		this.host.replaceData(records);
+		const first = (records[rowIndex] &&
+			Object.values(records[rowIndex])[0]) as unknown;
+		const label = `${column} of ${formatScalar(first) || `row ${rowIndex + 1}`}`;
+		this.path.push({ row: rowIndex, col: column, label });
+		this.clearSelection();
+		this.host.rerender();
+	}
+
+	private editMultiline(
+		record: Record<string, unknown>,
+		column: string,
+		r: number,
+		c: number
+	): void {
+		new MultilineModal(
+			this.host.app,
+			column,
+			String(record[column] ?? ""),
+			(value) => {
+				record[column] = value;
+				this.pendingFocus = { r, c };
+				this.host.replaceData(this.host.getData());
+			}
+		).open();
+	}
+
+	private setCellType(
+		record: Record<string, unknown>,
+		column: string,
+		to: CellType
+	): void {
+		record[column] = convertCell(record[column], to);
+		this.host.replaceData(this.host.getData());
+	}
+
+	// --- Drag and drop ---------------------------------------------------
+
+	private wireRowDrag(
+		gutter: HTMLElement,
+		records: Record<string, unknown>[],
+		rowIndex: number
+	): void {
+		gutter.addEventListener("dragstart", (evt) => {
+			evt.dataTransfer?.setData("application/x-yt-row", String(rowIndex));
+			evt.dataTransfer!.effectAllowed = "move";
+		});
+		gutter.addEventListener("dragover", (evt) => {
+			if (evt.dataTransfer?.types.includes("application/x-yt-row")) {
+				evt.preventDefault();
+				gutter.addClass("yt-drop-target");
+			}
+		});
+		gutter.addEventListener("dragleave", () => gutter.removeClass("yt-drop-target"));
+		gutter.addEventListener("drop", (evt) => {
+			gutter.removeClass("yt-drop-target");
+			const from = Number(evt.dataTransfer?.getData("application/x-yt-row"));
+			if (Number.isInteger(from) && from !== rowIndex) {
+				evt.preventDefault();
+				this.moveRow(records, from, rowIndex);
+			}
+		});
+	}
+
+	private wireColumnDrag(
+		grip: HTMLElement,
+		columns: string[],
+		colIndex: number
+	): void {
+		grip.addEventListener("dragstart", (evt) => {
+			evt.dataTransfer?.setData("application/x-yt-col", String(colIndex));
+			evt.dataTransfer!.effectAllowed = "move";
+		});
+		const th = grip.closest("th");
+		th?.addEventListener("dragover", (evt) => {
+			if ((evt as DragEvent).dataTransfer?.types.includes("application/x-yt-col")) {
+				evt.preventDefault();
+				th.addClass("yt-drop-target");
+			}
+		});
+		th?.addEventListener("dragleave", () => th.removeClass("yt-drop-target"));
+		th?.addEventListener("drop", (evt) => {
+			th.removeClass("yt-drop-target");
+			const from = Number(
+				(evt as DragEvent).dataTransfer?.getData("application/x-yt-col")
+			);
+			if (Number.isInteger(from) && from !== colIndex) {
+				evt.preventDefault();
+				this.moveColumn(columns, from, colIndex);
+			}
+		});
+	}
+
+	private wireColumnResize(
+		handle: HTMLElement,
+		th: HTMLElement,
+		column: string
+	): void {
+		handle.addEventListener("mousedown", (evt) => {
+			evt.preventDefault();
+			evt.stopPropagation();
+			const startX = evt.clientX;
+			const startWidth = th.getBoundingClientRect().width;
+			const onMove = (move: MouseEvent) => {
+				const width = Math.max(48, startWidth + (move.clientX - startX));
+				th.style.width = `${width}px`;
+				this.widths.set(column, width);
+			};
+			const onUp = () => {
+				document.removeEventListener("mousemove", onMove);
+				document.removeEventListener("mouseup", onUp);
+			};
+			document.addEventListener("mousemove", onMove);
+			document.addEventListener("mouseup", onUp);
+		});
 	}
 
 	// --- Context menus ---------------------------------------------------
@@ -359,18 +674,15 @@ export class TableRenderer extends Renderer {
 		evt.preventDefault();
 		const menu = new Menu();
 		menu.addItem((i) =>
-			i
-				.setTitle("Insert column left")
-				.setIcon("arrow-left")
-				.onClick(() => this.insertColumn(columns, colIndex))
+			i.setTitle("Insert column left").setIcon("arrow-left").onClick(() =>
+				this.insertColumn(columns, colIndex)
+			)
 		);
 		menu.addItem((i) =>
-			i
-				.setTitle("Insert column right")
-				.setIcon("arrow-right")
-				.onClick(() => this.insertColumn(columns, colIndex + 1))
+			i.setTitle("Insert column right").setIcon("arrow-right").onClick(() =>
+				this.insertColumn(columns, colIndex + 1)
+			)
 		);
-		menu.addSeparator();
 		menu.addItem((i) =>
 			i
 				.setTitle("Move left")
@@ -387,41 +699,40 @@ export class TableRenderer extends Renderer {
 		);
 		menu.addSeparator();
 		menu.addItem((i) =>
-			i
-				.setTitle("Delete column")
-				.setIcon("trash")
-				.onClick(() => this.deleteColumn(column))
+			i.setTitle("Delete column").setIcon("trash").onClick(() =>
+				this.deleteColumn(column)
+			)
 		);
 		menu.showAtMouseEvent(evt);
 	}
 
 	private openRowMenu(
 		evt: MouseEvent,
-		rowIndex: number,
-		records: Record<string, unknown>[]
+		records: Record<string, unknown>[],
+		rowIndex: number
 	): void {
 		evt.preventDefault();
 		const menu = new Menu();
 		menu.addItem((i) =>
-			i
-				.setTitle("Insert row above")
-				.setIcon("arrow-up")
-				.onClick(() => this.insertRow(records, rowIndex))
+			i.setTitle("Insert row above").setIcon("arrow-up").onClick(() =>
+				this.insertRow(records, rowIndex)
+			)
 		);
 		menu.addItem((i) =>
-			i
-				.setTitle("Insert row below")
-				.setIcon("arrow-down")
-				.onClick(() => this.insertRow(records, rowIndex + 1))
+			i.setTitle("Insert row below").setIcon("arrow-down").onClick(() =>
+				this.insertRow(records, rowIndex + 1)
+			)
 		);
 		menu.addItem((i) =>
-			i
-				.setTitle("Duplicate row")
-				.setIcon("copy")
-				.onClick(() => {
-					records.splice(rowIndex + 1, 0, { ...records[rowIndex] });
-					this.host.replaceData(records);
-				})
+			i.setTitle("Duplicate row").setIcon("copy").onClick(() => {
+				records.splice(rowIndex + 1, 0, structuredClone(records[rowIndex]));
+				this.host.replaceData(this.host.getData());
+			})
+		);
+		menu.addItem((i) =>
+			i.setTitle("Add sub-table column").setIcon("table").onClick(() =>
+				this.addSubtableColumn(records)
+			)
 		);
 		menu.addSeparator();
 		menu.addItem((i) =>
@@ -440,80 +751,86 @@ export class TableRenderer extends Renderer {
 		);
 		menu.addSeparator();
 		menu.addItem((i) =>
-			i
-				.setTitle("Delete row")
-				.setIcon("trash")
-				.onClick(() => {
-					records.splice(rowIndex, 1);
-					this.host.replaceData(records);
-				})
+			i.setTitle("Delete row").setIcon("trash").onClick(() => {
+				records.splice(rowIndex, 1);
+				this.host.replaceData(this.host.getData());
+			})
 		);
 		menu.showAtMouseEvent(evt);
 	}
 
-	private insertColumn(columns: string[], at: number): void {
-		const name = this.uniqueColumnName(columns);
-		const order = [...columns];
-		order.splice(at, 0, name);
-		const records = this.host.getData() as Record<string, unknown>[];
-		if (records.length === 0) {
-			records.push({ [name]: null });
-		} else {
-			for (const record of records) {
-				const rebuilt: Record<string, unknown> = {};
-				for (const key of order) {
-					rebuilt[key] = key === name ? null : record[key];
-				}
-				this.replaceKeys(record, rebuilt);
-			}
-		}
-		this.pendingFocus = { row: -1, col: at };
-		this.host.replaceData(records);
-	}
-
-	// --- Helpers ---------------------------------------------------------
-
-	private uniqueColumnName(columns: string[]): string {
-		const existing = new Set(columns);
-		for (let i = 1; i < 1000; i++) {
-			const name = `field ${i}`;
-			if (!existing.has(name)) {
-				return name;
-			}
-		}
-		return `field ${Date.now()}`;
-	}
-
-	/** Replace all keys of `record` in place with those of `rebuilt`. */
-	private replaceKeys(
+	private openCellMenu(
+		evt: MouseEvent,
 		record: Record<string, unknown>,
-		rebuilt: Record<string, unknown>
+		column: string,
+		rowIndex: number,
+		colIndex: number,
+		records: Record<string, unknown>[]
 	): void {
-		for (const key of Object.keys(record)) {
-			delete record[key];
+		evt.preventDefault();
+		this.setActive(rowIndex, colIndex);
+		const menu = new Menu();
+
+		const current = cellType(record[column]);
+		const types: CellType[] = [
+			"text",
+			"number",
+			"boolean",
+			"multiline",
+			"list",
+			"subtable",
+			"object",
+		];
+		for (const type of types) {
+			menu.addItem((i) =>
+				i
+					.setTitle(cellTypeLabel(type))
+					.setChecked(current === type)
+					.onClick(() => this.setCellType(record, column, type))
+			);
 		}
-		Object.assign(record, rebuilt);
+		menu.addSeparator();
+		menu.addItem((i) =>
+			i.setTitle("Clear cell").setIcon("eraser").onClick(() => {
+				record[column] = null;
+				this.host.replaceData(this.host.getData());
+			})
+		);
+		menu.showAtMouseEvent(evt);
 	}
 
-	private applyPendingFocus(): void {
-		const target = this.pendingFocus;
-		this.pendingFocus = null;
-		if (!target) {
-			return;
+	private addSubtableColumn(records: Record<string, unknown>[]): void {
+		const name = nextColumnName(collectColumns(records));
+		for (const record of records) {
+			record[name] = [];
 		}
-		if (target.row === -1) {
-			// Focus a column header input.
+		this.host.replaceData(this.host.getData());
+	}
+
+	// --- Focus restoration ----------------------------------------------
+
+	private applyPendingFocus(columns: string[]): void {
+		if (this.pendingHeaderFocus !== null) {
 			const heads = this.container.querySelectorAll<HTMLInputElement>(
 				".yt-colhead-input"
 			);
-			heads.item(target.col)?.focus();
-			heads.item(target.col)?.select();
+			const el = heads.item(this.pendingHeaderFocus);
+			el?.focus();
+			el?.select();
+			this.pendingHeaderFocus = null;
 			return;
 		}
-		this.moveFocus(target.row, target.col);
+		if (this.pendingFocus) {
+			const { r, c } = this.pendingFocus;
+			this.pendingFocus = null;
+			this.focusCell(r, Math.min(c, Math.max(0, columns.length - 1)));
+		}
 	}
 
-	private renderNotRecords(data: unknown): void {
+	// --- Empty / non-records states -------------------------------------
+
+	private renderNotRecords(): void {
+		const data = this.host.getData();
 		const empty = this.container.createDiv({ cls: "yt-empty" });
 		const isEmptyDoc =
 			data === undefined ||
@@ -526,11 +843,11 @@ export class TableRenderer extends Renderer {
 				cls: "yt-empty-subtitle",
 				text: "Add the first row to start a table.",
 			});
-			const start = empty.createEl("button", {
-				cls: "yt-btn",
-				text: "+ Add row",
+			const start = empty.createEl("button", { cls: "yt-btn", text: "+ Add row" });
+			start.addEventListener("click", () => {
+				this.pendingFocus = { r: 0, c: 0 };
+				this.host.replaceData([{ "field 1": null }]);
 			});
-			start.addEventListener("click", () => this.startFirstTable());
 			return;
 		}
 

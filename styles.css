@@ -18,9 +18,38 @@
 .yaml-trees-view .yt-modebar {
 	flex: 0 0 auto;
 	display: flex;
-	gap: 0;
+	align-items: center;
+	gap: var(--size-4-2);
+	flex-wrap: wrap;
 	padding: var(--size-4-2) var(--size-4-3);
 	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.yaml-trees-view .yt-mode-group {
+	display: flex;
+}
+
+.yaml-trees-view .yt-modebar-spacer {
+	flex: 1 1 auto;
+}
+
+.yaml-trees-view .yt-tool-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) var(--size-4-2);
+	background: var(--interactive-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	cursor: pointer;
+	box-shadow: none;
+}
+
+.yaml-trees-view .yt-tool-btn:hover {
+	background: var(--interactive-hover);
+	color: var(--text-normal);
 }
 
 .yaml-trees-view .yt-mode-btn {
@@ -76,6 +105,67 @@
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
+}
+
+/* --- Breadcrumb (sub-database drill-down) ------------------------------ */
+
+.yaml-trees-view .yt-breadcrumb {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	padding: var(--size-4-1) 0 var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.yaml-trees-view .yt-crumb {
+	cursor: pointer;
+	color: var(--text-accent);
+}
+
+.yaml-trees-view .yt-crumb:hover {
+	text-decoration: underline;
+}
+
+.yaml-trees-view .yt-crumb-sep {
+	color: var(--text-faint);
+}
+
+/* --- Lint panel -------------------------------------------------------- */
+
+.yaml-trees-view .yt-lint {
+	flex: 0 0 auto;
+	max-height: 30%;
+	overflow: auto;
+	padding: var(--size-4-2) var(--size-4-3);
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.yaml-trees-view .yt-lint-header {
+	font-weight: var(--font-semibold);
+	margin-bottom: var(--size-4-1);
+}
+
+.yaml-trees-view .yt-lint-empty {
+	color: var(--text-muted);
+}
+
+.yaml-trees-view .yt-lint-item {
+	padding: var(--size-4-1) var(--size-4-2);
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	margin-bottom: 2px;
+}
+
+.yaml-trees-view .yt-lint-item.is-error {
+	color: var(--text-error);
+	background: var(--background-modifier-error);
+}
+
+.yaml-trees-view .yt-lint-item.is-warning {
+	color: var(--text-warning, var(--text-muted));
 }
 
 /* --- Spreadsheet ------------------------------------------------------- */
@@ -243,6 +333,100 @@
 	color: var(--text-muted);
 	font-style: italic;
 	font-size: var(--font-ui-smaller);
+}
+
+/* --- Column grip / resize / drag --------------------------------------- */
+
+.yaml-trees-view .yt-colhead {
+	position: relative;
+}
+
+.yaml-trees-view .yt-col-grip {
+	display: inline-flex;
+	vertical-align: middle;
+	color: var(--text-faint);
+	cursor: grab;
+}
+
+.yaml-trees-view .yt-col-grip svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+.yaml-trees-view .yt-col-resize {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 6px;
+	height: 100%;
+	cursor: col-resize;
+}
+
+.yaml-trees-view .yt-col-resize:hover {
+	background: var(--interactive-accent);
+	opacity: 0.5;
+}
+
+.yaml-trees-view .yt-drop-target {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+}
+
+/* --- Cell selection / special cell types ------------------------------- */
+
+.yaml-trees-view .yt-cell.is-selected {
+	background: var(--text-selection, rgba(120, 120, 250, 0.15));
+}
+
+.yaml-trees-view .yt-cell.is-active {
+	box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}
+
+.yaml-trees-view .yt-drill {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-1);
+	margin: 2px var(--size-4-1);
+	padding: 2px var(--size-4-2);
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-accent);
+	cursor: pointer;
+	font-size: var(--font-ui-smaller);
+}
+
+.yaml-trees-view .yt-drill:hover {
+	background: var(--background-modifier-hover);
+}
+
+.yaml-trees-view .yt-drill svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+.yaml-trees-view .yt-cell-multiline {
+	font-style: italic;
+	cursor: pointer;
+}
+
+.yaml-trees-view .yt-cell-list {
+	color: var(--text-normal);
+}
+
+/* --- Multiline edit modal --------------------------------------------- */
+
+.yt-multiline-textarea {
+	width: 100%;
+	font-family: var(--font-monospace);
+	resize: vertical;
+}
+
+.yt-modal-buttons {
+	display: flex;
+	gap: var(--size-4-2);
+	justify-content: flex-end;
+	margin-top: var(--size-4-3);
 }
 
 /* --- Generic buttons --------------------------------------------------- */

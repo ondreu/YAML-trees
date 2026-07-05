@@ -14,6 +14,16 @@ export class Menu {
 
 export function setIcon(): void {}
 
+export class Modal {
+	app: unknown;
+	contentEl = { empty() {}, createEl() { return {}; }, createDiv() { return {}; } };
+	constructor(app: unknown) {
+		this.app = app;
+	}
+	open(): void {}
+	close(): void {}
+}
+
 export function debounce<T extends (...args: unknown[]) => unknown>(fn: T): T {
 	return fn;
 }

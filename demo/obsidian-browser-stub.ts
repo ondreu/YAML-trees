@@ -10,6 +10,16 @@ export class Menu {
 	showAtMouseEvent(): void {}
 }
 
+export class Modal {
+	app: unknown;
+	contentEl = document.createElement("div");
+	constructor(app: unknown) {
+		this.app = app;
+	}
+	open(): void {}
+	close(): void {}
+}
+
 export function setIcon(el: HTMLElement, _name: string): void {
 	// Render a small neutral square so icon slots are not empty in the demo.
 	el.innerHTML =
