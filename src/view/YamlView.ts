@@ -240,6 +240,20 @@ export class YamlView extends TextFileView implements EditorHost {
 		this.renderActive();
 	}
 
+	getSourceText(): string {
+		return serializeYamlWithMeta(this.frontmatter, this.model, this.commentMap);
+	}
+
+	setSourceText(text: string): void {
+		const result = parseYamlWithMeta(text);
+		this.recordHistory();
+		this.model = result.value;
+		this.frontmatter = result.frontmatter;
+		this.commentMap = result.commentMap;
+		this.requestSave();
+		this.refreshLint();
+	}
+
 	// --- Layout & rendering ----------------------------------------------
 
 	private buildLayout(): void {

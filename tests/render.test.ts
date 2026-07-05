@@ -4,6 +4,7 @@ import { installDom } from "./obsidian-dom-shim";
 import { TableRenderer } from "../src/view/TableRenderer";
 import { SourceRenderer } from "../src/view/SourceRenderer";
 import { FormRenderer } from "../src/view/FormRenderer";
+import { serializeYaml } from "../src/model/YamlDocument";
 import type { EditorHost } from "../src/view/Renderer";
 
 const document = installDom();
@@ -38,6 +39,8 @@ function makeHost(initial: unknown, renderer?: () => TableRenderer): TestHost {
 		comments: () => null,
 		getComment: () => undefined,
 		setComment: () => {},
+		getSourceText: () => serializeYaml(data),
+		setSourceText: () => {},
 		rerenders: 0,
 		current: () => data,
 	};
@@ -347,5 +350,60 @@ test("cell comments survive reordering (WeakMap keyed by record object)", () => 
 	assert.equal(result.commentMap!.get(bolt)?.get("part"), " fastener");
 	const out = serializeYamlWithMeta(null, records, result.commentMap);
 	assert.match(out, /part: Bolt # fastener/);
+});
+
+// --- Source view shows frontmatter + comments -------------------------------
+
+test("Source view shows frontmatter and comments via getSourceText", () => {
+	const src = "---\ntitle: My BOM\n---\n- part: Bolt  # fastener\n  qty: 4\n";
+	const result = parseYamlWithMeta(src);
+	const container = document.createElement("div");
+	const host: EditorHost = {
+		app: {} as never,
+		baseName: () => "test",
+		ruleSet: () => ({}),
+		getData: () => result.value,
+		replaceData: () => {},
+		replaceDataQuiet: () => {},
+		touch: () => {},
+		rerender: () => {},
+		comments: () => result.commentMap,
+		getComment: () => undefined,
+		setComment: () => {},
+		getSourceText: () =>
+			serializeYamlWithMeta(result.frontmatter, result.value, result.commentMap),
+		setSourceText: () => {},
+	};
+	new SourceRenderer(container, host).render();
+	const textarea = container.querySelector<HTMLTextAreaElement>(".yt-source-input")!;
+	assert.match(textarea.value, /^---\ntitle: My BOM/);
+	assert.match(textarea.value, /part: Bolt # fastener/);
+});
+
+// --- Form view shows comment indicator --------------------------------------
+
+test("Form view shows comment marker on commented fields", () => {
+	const result = parseYamlWithMeta("part: Bolt  # fastener\nqty: 4\n");
+	const obj = result.value as Record<string, unknown>;
+	const container = document.createElement("div");
+	const host: EditorHost = {
+		app: {} as never,
+		baseName: () => "test",
+		ruleSet: () => ({}),
+		getData: () => obj,
+		replaceData: () => {},
+		replaceDataQuiet: () => {},
+		touch: () => {},
+		rerender: () => {},
+		comments: () => result.commentMap,
+		getComment: (c, k) => result.commentMap?.get(c)?.get(k),
+		setComment: () => {},
+		getSourceText: () => "",
+		setSourceText: () => {},
+	};
+	new FormRenderer(container, host).render();
+	const commented = container.querySelector<HTMLElement>(".yt-field-commented");
+	assert.ok(commented, "expected a commented field marker");
+	assert.match(commented!.getAttribute("title")!, /#\s+fastener/);
 });
 

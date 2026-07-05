@@ -29,6 +29,10 @@ export interface EditorHost {
 	getComment(container: object, key: string): string | undefined;
 	/** Set or replace a cell's trailing comment (empty string removes it). */
 	setComment(container: object, key: string, text: string): void;
+	/** Full source text (frontmatter + body + comments) for the Source view. */
+	getSourceText(): string;
+	/** Re-parse edited source text and update model/frontmatter/comments. */
+	setSourceText(text: string): void;
 }
 
 export abstract class Renderer {

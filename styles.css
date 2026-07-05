@@ -954,6 +954,14 @@
 	padding: var(--size-4-1) 0;
 }
 
+/* A trailing comment is attached to this field. A small marker after the label
+ * makes it discoverable; the comment text shows as a native tooltip. */
+.yaml-databases-view .yt-field-commented .yt-field-label::after {
+	content: " #";
+	color: var(--color-yellow, #e0c040);
+	font-weight: 600;
+}
+
 .yaml-databases-view .yt-field-label {
 	flex: 0 0 12rem;
 	color: var(--text-muted);

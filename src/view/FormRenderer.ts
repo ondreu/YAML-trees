@@ -1,7 +1,8 @@
-import { setIcon } from "obsidian";
+import { Menu, setIcon } from "obsidian";
 import { Renderer } from "./Renderer";
 import { isPlainObject } from "../model/shape";
 import { coerceScalar, formatScalar, isEditableScalar } from "../model/coerce";
+import { CommentModal } from "./CommentModal";
 
 // Recursive form/tree editor for arbitrary YAML: maps become labelled fields,
 // arrays become numbered items, nested structures become collapsible groups.
@@ -15,8 +16,8 @@ export class FormRenderer extends Renderer {
 		const data = this.host.getData();
 
 		if (isEditableScalar(data)) {
-			// A bare scalar document — edit it directly.
-			this.renderScalarRow(root, "value", data, (next) => {
+			// A bare scalar document — edit it directly. No container for comments.
+			this.renderScalarRow(root, "value", data, null, (next) => {
 				this.host.replaceData(next);
 			});
 			return;
@@ -103,7 +104,7 @@ export class FormRenderer extends Renderer {
 		onMutate: () => void
 	): void {
 		if (isEditableScalar(value)) {
-			this.renderScalarRow(parent, key, value, (next) => {
+			this.renderScalarRow(parent, key, value, holder, (next) => {
 				this.assign(holder, key, next);
 				onMutate();
 			}, () => this.removeEntry(holder, key));
@@ -141,11 +142,19 @@ export class FormRenderer extends Renderer {
 		parent: HTMLElement,
 		key: string,
 		value: unknown,
+		holder: Record<string, unknown> | unknown[] | null,
 		onChange: (next: unknown) => void,
 		onDelete?: () => void
 	): void {
 		const row = parent.createDiv({ cls: "yt-field" });
 		row.createSpan({ cls: "yt-field-label", text: this.labelFor(key) });
+
+		// Trailing comment indicator + tooltip (only when a holder exists).
+		const comment = holder ? this.host.getComment(holder, key) : undefined;
+		if (comment) {
+			row.addClass("yt-field-commented");
+			row.setAttr("title", `# ${comment}`);
+		}
 
 		if (typeof value === "boolean") {
 			const checkbox = row.createEl("input", {
@@ -171,6 +180,33 @@ export class FormRenderer extends Renderer {
 				if (typeof next !== before) {
 					this.host.rerender();
 				}
+			});
+		}
+
+		// Right-click the row to add/edit/remove a comment (when a holder exists).
+		if (holder) {
+			row.addEventListener("contextmenu", (evt) => {
+				evt.preventDefault();
+				const menu = new Menu();
+				const existing = this.host.getComment(holder, key) ?? "";
+				menu.addItem((i) =>
+					i
+						.setTitle(existing ? "Edit comment" : "Add comment")
+						.setIcon("message-square")
+						.onClick(() =>
+							new CommentModal(this.host.app, this.labelFor(key), existing, (text) => {
+								this.host.setComment(holder, key, text);
+							}).open()
+						)
+				);
+				if (existing) {
+					menu.addItem((i) =>
+						i.setTitle("Remove comment").setIcon("trash").onClick(() =>
+							this.host.setComment(holder, key, "")
+						)
+					);
+				}
+				menu.showAtMouseEvent(evt);
 			});
 		}
 

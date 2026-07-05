@@ -1,11 +1,12 @@
 import { debounce } from "obsidian";
 import { Renderer } from "./Renderer";
-import { parseYaml, serializeYaml } from "../model/YamlDocument";
+import { parseYamlWithMeta } from "../model/YamlDocument";
 import { highlightYaml } from "./yamlHighlight";
 
-// Raw YAML escape hatch: a monospace textarea bound to the serialized model.
-// On valid input the model is updated; on invalid input an inline error is shown
-// and the model is left untouched so the user never loses data mid-edit.
+// Raw YAML escape hatch: a monospace textarea bound to the full source text
+// (frontmatter + body + comments). On valid input the model, frontmatter and
+// comment map are all updated; on invalid input an inline error is shown and
+// the model is left untouched so the user never loses data mid-edit.
 //
 // Syntax highlighting is provided by a coloured <pre> layer rendered directly
 // behind a transparent textarea. The textarea keeps native editing/caret/
@@ -27,7 +28,7 @@ export class SourceRenderer extends Renderer {
 		const textarea = editor.createEl("textarea", {
 			cls: "yt-source-input",
 		});
-		textarea.value = serializeYaml(this.host.getData());
+		textarea.value = this.host.getSourceText();
 		textarea.spellcheck = false;
 		textarea.setAttr("wrap", "off");
 		textarea.setAttr("autocapitalize", "off");
@@ -45,11 +46,14 @@ export class SourceRenderer extends Renderer {
 		const validate = debounce(
 			() => {
 				try {
-					const { value } = parseYaml(textarea.value);
+					// Validate that it parses; discard the result — the host will
+					// re-parse the same text via setSourceText.
+					parseYamlWithMeta(textarea.value);
 					error.hide();
 					wrapper.removeClass("has-error");
-					// Update the model but do NOT re-render (would reset the caret).
-					this.host.replaceDataQuiet(value);
+					// Update model + frontmatter + comments without re-rendering
+					// (would reset the caret).
+					this.host.setSourceText(textarea.value);
 				} catch (e) {
 					wrapper.addClass("has-error");
 					error.setText(
