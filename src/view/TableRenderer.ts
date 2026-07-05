@@ -19,6 +19,8 @@ import {
 	blankRow,
 } from "../model/records";
 import { columnTotals } from "../model/aggregate";
+import { computeView, type SortDir } from "../model/sort";
+import { lintRecords, type ColumnRule } from "../lint/lint";
 import { MultilineModal } from "./MultilineModal";
 
 // Spreadsheet editor for a list of records. Supports drill-down into nested
@@ -65,6 +67,14 @@ export class TableRenderer extends Renderer {
 	/** Freeze the first data column while scrolling horizontally. */
 	private freezeFirst = true;
 	private dropEl: HTMLElement | null = null;
+	/** View-only sort and filter (do not mutate the model). */
+	private sortColumn: string | null = null;
+	private sortDir: SortDir = "asc";
+	private filter = "";
+	private tbodyEl: HTMLElement | null = null;
+	/** Column rules (schema) and invalid cells for the current level. */
+	private columnRule = new Map<string, ColumnRule>();
+	private invalid = new Set<string>();
 
 	render(): void {
 		this.container.empty();
@@ -80,6 +90,9 @@ export class TableRenderer extends Renderer {
 
 		const records = level;
 		const columns = collectColumns(records);
+		this.computeSchema(records);
+
+		this.renderControls(records, columns);
 
 		const scroll = this.container.createDiv({ cls: "yt-sheet-scroll" });
 		scroll.tabIndex = 0;
@@ -88,6 +101,7 @@ export class TableRenderer extends Renderer {
 
 		this.renderHead(table, records, columns);
 		this.renderBody(table, records, columns);
+		this.applyView(records, columns);
 
 		this.wireClipboard(scroll, records, columns);
 		this.applyPendingFocus(columns);
@@ -114,6 +128,111 @@ export class TableRenderer extends Renderer {
 		}
 		this.path = validPath;
 		return cur;
+	}
+
+	// --- Schema (rules) -------------------------------------------------
+
+	/** Build the column-rule map and invalid-cell set from the lint rules. */
+	private computeSchema(records: Record<string, unknown>[]): void {
+		const ruleSet = this.host.ruleSet();
+		this.columnRule = new Map();
+		for (const rule of ruleSet.rules ?? []) {
+			this.columnRule.set(rule.column, rule);
+		}
+		this.invalid = new Set();
+		if ((ruleSet.rules?.length ?? 0) > 0) {
+			for (const d of lintRecords(records, ruleSet)) {
+				if (d.row !== undefined && d.column) {
+					this.invalid.add(`${d.row}:${d.column}`);
+				}
+			}
+		}
+	}
+
+	// --- Sort & filter (view-only) --------------------------------------
+
+	private renderControls(
+		records: Record<string, unknown>[],
+		columns: string[]
+	): void {
+		const bar = this.container.createDiv({ cls: "yt-table-controls" });
+		const search = bar.createEl("input", {
+			type: "text",
+			cls: "yt-filter-input",
+			attr: { placeholder: "Filter rows", spellcheck: "false" },
+		});
+		search.value = this.filter;
+		search.addEventListener("input", () => {
+			this.filter = search.value;
+			this.applyView(records, columns);
+		});
+		if (this.sortColumn) {
+			const clear = bar.createEl("button", {
+				cls: "yt-filter-clear",
+				text: `Sorted by ${this.sortColumn} (clear)`,
+			});
+			clear.addEventListener("click", () => {
+				this.sortColumn = null;
+				this.host.rerender();
+			});
+		}
+	}
+
+	private cycleSort(column: string): void {
+		if (this.sortColumn !== column) {
+			this.sortColumn = column;
+			this.sortDir = "asc";
+		} else if (this.sortDir === "asc") {
+			this.sortDir = "desc";
+		} else {
+			this.sortColumn = null;
+		}
+		this.host.rerender();
+	}
+
+	/** Apply the current filter (hide rows) and sort (reorder DOM rows). */
+	private applyView(
+		records: Record<string, unknown>[],
+		columns: string[]
+	): void {
+		const tbody = this.tbodyEl;
+		if (!tbody) return;
+
+		const visible = new Set(
+			computeView(records, columns, { filter: this.filter })
+		);
+		for (let i = 0; i < records.length; i++) {
+			const tr = tbody.querySelector<HTMLElement>(`tr[data-row-index="${i}"]`);
+			if (tr) tr.style.display = visible.has(i) ? "" : "none";
+		}
+
+		if (this.sortColumn) {
+			const order = computeView(records, columns, {
+				sortColumn: this.sortColumn,
+				sortDir: this.sortDir,
+				filter: this.filter,
+			});
+			const anchor = tbody.querySelector(".yt-totals, .yt-addrow");
+			for (const i of order) {
+				const tr = tbody.querySelector<HTMLElement>(`tr[data-row-index="${i}"]`);
+				if (tr && anchor) tbody.insertBefore(tr, anchor);
+			}
+		}
+
+		this.updateTotalsRow(records, columns);
+	}
+
+	private updateTotalsRow(
+		records: Record<string, unknown>[],
+		columns: string[]
+	): void {
+		const tbody = this.tbodyEl;
+		if (!tbody) return;
+		tbody.querySelector(".yt-totals")?.remove();
+		this.renderTotals(tbody, records, columns);
+		const totals = tbody.querySelector(".yt-totals");
+		const addrow = tbody.querySelector(".yt-addrow");
+		if (totals && addrow) tbody.insertBefore(totals, addrow);
 	}
 
 	private renderBreadcrumb(haveTable: boolean): void {
@@ -179,6 +298,17 @@ export class TableRenderer extends Renderer {
 				}
 			});
 
+			const sort = th.createSpan({ cls: "yt-col-sort" });
+			const state =
+				this.sortColumn === column ? (this.sortDir === "asc" ? "up" : "down") : null;
+			setIcon(sort, state === "up" ? "chevron-up" : state === "down" ? "chevron-down" : "chevrons-up-down");
+			if (state) sort.addClass("is-active");
+			sort.setAttr("aria-label", "Sort");
+			sort.addEventListener("click", (evt) => {
+				evt.stopPropagation();
+				this.cycleSort(column);
+			});
+
 			th.addEventListener("contextmenu", (evt) =>
 				this.openColumnMenu(evt, column, colIndex, columns)
 			);
@@ -200,6 +330,7 @@ export class TableRenderer extends Renderer {
 		columns: string[]
 	): void {
 		const tbody = table.createEl("tbody");
+		this.tbodyEl = tbody;
 
 		records.forEach((record, rowIndex) => {
 			this.cellEls[rowIndex] = [];
@@ -250,7 +381,10 @@ export class TableRenderer extends Renderer {
 		records: Record<string, unknown>[],
 		columns: string[]
 	): void {
-		const totals = columnTotals(records, columns);
+		// Total the filtered rows only.
+		const idx = computeView(records, columns, { filter: this.filter });
+		const filtered = idx.map((i) => records[i]);
+		const totals = columnTotals(filtered, columns);
 		if (!columns.some((c) => totals[c]?.numeric)) {
 			return; // Nothing numeric to total.
 		}
@@ -315,6 +449,16 @@ export class TableRenderer extends Renderer {
 		td.addEventListener("contextmenu", (evt) =>
 			this.openCellMenu(evt, record, column, rowIndex, colIndex, records)
 		);
+		if (this.invalid.has(`${rowIndex}:${column}`)) {
+			td.addClass("yt-cell-invalid");
+		}
+
+		// Schema: enum columns render as a dropdown.
+		const rule = this.columnRule.get(column);
+		if (rule?.enum && rule.enum.length && (type === "text" || type === "number")) {
+			this.renderEnumCell(td, record, column, rowIndex, colIndex, rule.enum);
+			return;
+		}
 
 		if (isSubtable(value)) {
 			const key = `${rowIndex}:${column}`;
@@ -388,6 +532,37 @@ export class TableRenderer extends Renderer {
 		});
 	}
 
+	/** Render an enum column cell as a dropdown of the allowed values. */
+	private renderEnumCell(
+		td: HTMLElement,
+		record: Record<string, unknown>,
+		column: string,
+		rowIndex: number,
+		colIndex: number,
+		options: unknown[]
+	): void {
+		const select = td.createEl("select", { cls: "yt-cell-select" });
+		select.dataset.row = String(rowIndex);
+		select.dataset.col = String(colIndex);
+		select.createEl("option", { value: "", text: "" });
+		const allowed = options.map((o) => String(o));
+		for (const opt of allowed) {
+			select.createEl("option", { value: opt, text: opt });
+		}
+		const current = record[column] === null || record[column] === undefined
+			? ""
+			: String(record[column]);
+		if (current && !allowed.includes(current)) {
+			select.createEl("option", { value: current, text: `${current} (?)` });
+		}
+		select.value = current;
+		select.addEventListener("focus", () => this.setActive(rowIndex, colIndex));
+		select.addEventListener("change", () => {
+			record[column] = select.value === "" ? null : coerceScalar(select.value);
+			this.host.replaceData(this.host.getData()); // re-validate
+		});
+	}
+
 	private makeCellInput(
 		td: HTMLElement,
 		rowIndex: number,
@@ -429,6 +604,11 @@ export class TableRenderer extends Renderer {
 
 	private wireCellKeys(el: HTMLElement, r: number, c: number): void {
 		el.addEventListener("keydown", (evt: KeyboardEvent) => {
+			if ((evt.ctrlKey || evt.metaKey) && (evt.key === "d" || evt.key === "D")) {
+				evt.preventDefault();
+				this.cmdFillDown();
+				return;
+			}
 			switch (evt.key) {
 				case "Enter":
 					evt.preventDefault();
@@ -741,6 +921,32 @@ export class TableRenderer extends Renderer {
 		if (records) this.addSubtableColumn(records);
 	}
 
+	/** Fill the top row's values down through the selected range. */
+	cmdFillDown(): void {
+		if (!this.anchor || !this.active) {
+			new Notice("Select a range first.");
+			return;
+		}
+		const records = this.resolveLevel();
+		if (!records) return;
+		const columns = collectColumns(records);
+		const r1 = Math.min(this.anchor.r, this.active.r);
+		const r2 = Math.max(this.anchor.r, this.active.r);
+		const c1 = Math.min(this.anchor.c, this.active.c);
+		const c2 = Math.max(this.anchor.c, this.active.c);
+		for (let c = c1; c <= c2; c++) {
+			const col = columns[c];
+			const top = records[r1]?.[col];
+			for (let r = r1 + 1; r <= r2; r++) {
+				if (records[r]) {
+					records[r][col] =
+						top && typeof top === "object" ? structuredClone(top) : top;
+				}
+			}
+		}
+		this.host.replaceData(this.host.getData());
+	}
+
 	/** Insert a copy of a reused component into the current level. */
 	insertComponent(template: Record<string, unknown>): void {
 		const records = this.resolveLevel();
@@ -762,6 +968,10 @@ export class TableRenderer extends Renderer {
 	): void {
 		gutter.addEventListener("pointerdown", (evt: PointerEvent) => {
 			if (evt.button !== 0) return;
+			if (this.sortColumn) {
+				new Notice("Clear the sort to drag rows.");
+				return;
+			}
 			evt.preventDefault();
 			gutter.setPointerCapture(evt.pointerId);
 			gutter.addClass("yt-dragging");

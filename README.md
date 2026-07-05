@@ -36,6 +36,13 @@ single edit produces a single-line change. It works just as well for any YAML.
   tree into one parts list and export it as CSV/XLSX.
 - **Totals footer** with column sums, a **frozen first column**, and
   **touch-friendly drag** of row numbers / column handles to reorder.
+- **Sort & filter** (view-only) — click a column's chevron to sort; a filter box
+  shows only matching rows. Neither changes the file.
+- **Schema from lint rules** — a column with an `enum` rule renders as a
+  **dropdown**; cells that violate a rule are outlined.
+- **Undo / redo** (ribbon History, or Ctrl/Cmd+Z / Shift+Z) and **fill-down**
+  (Ctrl/Cmd+D) over a selected range.
+- **Import** a CSV or XLSX file into the table (Data -> Import).
 - **Cell types** — per cell choose text, number, checkbox, multiline text, list,
   sub-table, or object (right-click a cell).
 - **Linter** — built-in checks plus your own **declarative YAML rules**

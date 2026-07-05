@@ -72,6 +72,12 @@ function makeHost(initial: unknown, factory: () => { render(): void }): EditorHo
 	return {
 		app: {} as never,
 		baseName: () => "Demo BOM",
+		ruleSet: () => ({
+			rules: [
+				{ column: "part", required: true },
+				{ column: "supplier", enum: ["In-house", "Bolts Ltd", "JLC"] },
+			],
+		}),
 		getData: () => data,
 		replaceData: (v: unknown) => {
 			data = v;
@@ -122,9 +128,15 @@ function buildRibbon(ribbon: HTMLElement, mode: "table" | "form"): void {
 		const edit = group("Edit");
 		const a = edit.createDiv({ cls: "yt-rb-mini-col" });
 		mini(a, "Duplicate");
-		mini(a, "Delete row");
+		mini(a, "Fill down");
 		const b = edit.createDiv({ cls: "yt-rb-mini-col" });
+		mini(b, "Delete row");
 		mini(b, "Delete column");
+		div();
+		const history = group("History");
+		const h = history.createDiv({ cls: "yt-rb-mini-col" });
+		mini(h, "Undo");
+		mini(h, "Redo");
 		div();
 		rb(group("Reuse"), "Components");
 	}
@@ -133,6 +145,7 @@ function buildRibbon(ribbon: HTMLElement, mode: "table" | "form"): void {
 	const data = group("Data");
 	rb(data, "Find");
 	rb(data, "Flatten");
+	rb(data, "Import");
 	rb(data, "Lint");
 	div();
 	const exp = group("Export");

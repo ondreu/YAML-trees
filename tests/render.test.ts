@@ -19,6 +19,7 @@ function makeHost(initial: unknown, renderer?: () => TableRenderer): TestHost {
 	const host: TestHost = {
 		app: {} as never,
 		baseName: () => "test",
+		ruleSet: () => ({}),
 		getData: () => data,
 		replaceData: (v: unknown) => {
 			data = v;

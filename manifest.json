@@ -1,7 +1,7 @@
 {
 	"id": "yaml-trees",
 	"name": "YAML Databases",
-	"version": "0.1.0-beta.8",
+	"version": "0.1.0-beta.9",
 	"minAppVersion": "1.5.0",
 	"description": "View, create and edit YAML files as interactive databases: spreadsheet, form or source, with sub-tables, linting and CSV/XLSX/HTML export. Deterministic, git-diff-friendly output.",
 	"author": "ondreu",

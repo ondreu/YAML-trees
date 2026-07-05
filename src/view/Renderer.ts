@@ -1,4 +1,5 @@
 import { App } from "obsidian";
+import type { RuleSet } from "../lint/lint";
 
 // Contract between the view and its interchangeable renderers (table / form /
 // source). The view owns the model; renderers read it through `getData` and
@@ -9,6 +10,8 @@ export interface EditorHost {
 	readonly app: App;
 	/** Base name of the file being edited (for breadcrumbs / export names). */
 	baseName(): string;
+	/** Parsed column rules (schema) used for enum dropdowns and validation. */
+	ruleSet(): RuleSet;
 	/** Current model value. */
 	getData(): unknown;
 	/** Replace the whole model, persist, and re-render the active renderer. */

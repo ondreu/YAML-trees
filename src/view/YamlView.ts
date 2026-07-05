@@ -22,6 +22,8 @@ import { collectComponents } from "../model/dedupe";
 import { FindReplaceModal } from "./modals/FindReplaceModal";
 import { ComponentsModal } from "./modals/ComponentsModal";
 import { FlattenModal } from "./modals/FlattenModal";
+import { parseCsv } from "../import/csvRead";
+import { parseXlsx } from "../import/xlsxRead";
 
 // The custom main-area view for `.yaml` / `.yml` files. Extends TextFileView so
 // Obsidian handles the file load/save lifecycle; we supply get/setViewData and
@@ -47,6 +49,11 @@ export class YamlView extends TextFileView implements EditorHost {
 	private modeButtons: Partial<Record<ViewMode, HTMLElement>> = {};
 	private parseError: string | null = null;
 	private lintVisible = false;
+	/** Undo/redo history of model snapshots. */
+	private undoStack: unknown[] = [];
+	private redoStack: unknown[] = [];
+	private lastSnapshot: unknown = undefined;
+	private suppressHistory = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: YamlTreesPlugin) {
 		super(leaf);
@@ -81,9 +88,12 @@ export class YamlView extends TextFileView implements EditorHost {
 			this.clear();
 		}
 		this.renderers = {};
+		this.undoStack = [];
+		this.redoStack = [];
 		try {
 			const result = parseYaml(data);
 			this.model = result.value;
+			this.lastSnapshot = structuredClone(this.model);
 			this.parseError = null;
 			if (result.hasComments || result.hasAnchors) {
 				this.warnRoundTrip(result.hasComments, result.hasAnchors);
@@ -111,11 +121,16 @@ export class YamlView extends TextFileView implements EditorHost {
 		return this.file?.basename ?? "database";
 	}
 
+	ruleSet() {
+		return parseRules(this.plugin.settings.lintRules).ruleSet;
+	}
+
 	getData(): unknown {
 		return this.model;
 	}
 
 	replaceData(value: unknown): void {
+		this.recordHistory();
 		this.model = value;
 		this.requestSave();
 		this.renderActive();
@@ -123,14 +138,55 @@ export class YamlView extends TextFileView implements EditorHost {
 	}
 
 	replaceDataQuiet(value: unknown): void {
+		this.recordHistory();
 		this.model = value;
 		this.requestSave();
 		this.refreshLint();
 	}
 
 	touch(): void {
+		this.recordHistory();
 		this.requestSave();
 		this.refreshLint();
+	}
+
+	/** Push the previous settled state onto the undo stack. */
+	private recordHistory(): void {
+		if (this.suppressHistory) return;
+		if (this.lastSnapshot !== undefined) {
+			this.undoStack.push(this.lastSnapshot);
+			if (this.undoStack.length > 100) this.undoStack.shift();
+		}
+		this.lastSnapshot = structuredClone(this.model);
+		this.redoStack = [];
+	}
+
+	private undo(): void {
+		if (this.undoStack.length === 0) {
+			new Notice("Nothing to undo.");
+			return;
+		}
+		this.redoStack.push(structuredClone(this.model));
+		this.restore(this.undoStack.pop());
+	}
+
+	private redo(): void {
+		if (this.redoStack.length === 0) {
+			new Notice("Nothing to redo.");
+			return;
+		}
+		this.undoStack.push(structuredClone(this.model));
+		this.restore(this.redoStack.pop());
+	}
+
+	private restore(snapshot: unknown): void {
+		this.suppressHistory = true;
+		this.model = snapshot;
+		this.lastSnapshot = structuredClone(snapshot);
+		this.requestSave();
+		this.renderActive();
+		this.refreshLint();
+		this.suppressHistory = false;
 	}
 
 	rerender(): void {
@@ -156,6 +212,21 @@ export class YamlView extends TextFileView implements EditorHost {
 			});
 			return;
 		}
+
+		// Undo/redo via keyboard when focus is not inside a cell editor.
+		root.addEventListener("keydown", (e) => {
+			const tag = (e.target as HTMLElement)?.tagName;
+			if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+			const mod = e.ctrlKey || e.metaKey;
+			if (mod && (e.key === "z" || e.key === "Z")) {
+				e.preventDefault();
+				if (e.shiftKey) this.redo();
+				else this.undo();
+			} else if (mod && (e.key === "y" || e.key === "Y")) {
+				e.preventDefault();
+				this.redo();
+			}
+		});
 
 		this.ribbonEl = root.createDiv({ cls: "yt-ribbon" });
 		this.buildRibbon();
@@ -203,13 +274,22 @@ export class YamlView extends TextFileView implements EditorHost {
 			this.ribbonMini(colA, "copy", "Duplicate", () =>
 				this.tableCmd((t) => t.cmdDuplicateRow())
 			);
-			this.ribbonMini(colA, "trash-2", "Delete row", () =>
-				this.tableCmd((t) => t.cmdDeleteRow())
+			this.ribbonMini(colA, "arrow-down-to-line", "Fill down", () =>
+				this.tableCmd((t) => t.cmdFillDown())
 			);
 			const colB = edit.createDiv({ cls: "yt-rb-mini-col" });
+			this.ribbonMini(colB, "trash-2", "Delete row", () =>
+				this.tableCmd((t) => t.cmdDeleteRow())
+			);
 			this.ribbonMini(colB, "trash", "Delete column", () =>
 				this.tableCmd((t) => t.cmdDeleteColumn())
 			);
+
+			this.ribbonDivider();
+			const history = this.ribbonGroup("History");
+			const hcol = history.createDiv({ cls: "yt-rb-mini-col" });
+			this.ribbonMini(hcol, "undo-2", "Undo", () => this.undo());
+			this.ribbonMini(hcol, "redo-2", "Redo", () => this.redo());
 
 			this.ribbonDivider();
 			const reuse = this.ribbonGroup("Reuse");
@@ -220,6 +300,7 @@ export class YamlView extends TextFileView implements EditorHost {
 		const data = this.ribbonGroup("Data");
 		this.ribbonButton(data, "search", "Find", () => this.openFindReplace());
 		this.ribbonButton(data, "layers", "Flatten", () => this.openFlatten());
+		this.ribbonButton(data, "import", "Import", () => this.importFile());
 		this.ribbonButton(data, "circle-check", "Lint", () => this.toggleLint());
 
 		this.ribbonDivider();
@@ -401,6 +482,41 @@ export class YamlView extends TextFileView implements EditorHost {
 					: recordsToXlsx(rows, columns, `${this.baseName()} flat`);
 			void this.writeSibling(name, content);
 		}).open();
+	}
+
+	// --- Import ----------------------------------------------------------
+
+	private importFile(): void {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = ".csv,.xlsx,text/csv";
+		input.addEventListener("change", () => void this.handleImport(input.files?.[0]));
+		input.click();
+	}
+
+	private async handleImport(file?: File | null): Promise<void> {
+		if (!file) return;
+		try {
+			const records = file.name.toLowerCase().endsWith(".xlsx")
+				? await parseXlsx(new Uint8Array(await file.arrayBuffer()))
+				: parseCsv(await file.text());
+			if (records.length === 0) {
+				new Notice("YAML Databases: nothing to import.");
+				return;
+			}
+			const current = asRecords(this.model);
+			if (current) {
+				for (const r of records) current.push(r);
+				this.replaceData(this.model);
+			} else {
+				this.replaceData(records);
+			}
+			new Notice(`YAML Databases: imported ${records.length} row(s).`);
+		} catch (e) {
+			new Notice(
+				`YAML Databases: import failed: ${e instanceof Error ? e.message : String(e)}`
+			);
+		}
 	}
 
 	// --- Export ----------------------------------------------------------
