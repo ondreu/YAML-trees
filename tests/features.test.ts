@@ -56,9 +56,10 @@ test("makeZip round-trips entry names and sizes in the directory", () => {
 });
 
 test("HTML export is self-contained and embeds the data", () => {
-	const html = exportHtml(BOM, "MyBOM");
+	const html = exportHtml(BOM, "MyBOM", "- part: Bolt\n  qty: 1\n");
 	assert.ok(html.startsWith("<!doctype html>"));
 	assert.ok(html.includes("__YAMLDB_DATA__"));
+	assert.ok(html.includes("__YAMLDB_YAML__"));
 	assert.ok(html.includes("Bolt"));
 	// No external resource references.
 	assert.ok(!/src="http/.test(html));

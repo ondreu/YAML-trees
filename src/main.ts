@@ -1,5 +1,5 @@
 import { Notice, Plugin, TFile, TFolder, normalizePath } from "obsidian";
-import { VIEW_TYPE_YAML, YAML_EXTENSIONS, ICONS } from "./constants";
+import { VIEW_TYPE_YAML, YAML_MD_SUFFIX, isYamlDbFile, ICONS } from "./constants";
 import { YamlView } from "./view/YamlView";
 import {
 	DEFAULT_SETTINGS,
@@ -17,20 +17,25 @@ export default class YamlTreesPlugin extends Plugin {
 		// active (useful when checking whether a beta update actually landed).
 		console.log(`YAML Databases ${this.manifest.version} loaded`);
 
-		// Custom view for editing YAML, registered for the yaml/yml extensions so
-		// clicking such a file in the explorer opens it here in the main area.
+		// Custom view for editing YAML stored inside Markdown files
+		// (`example.yaml.md`). We cannot call registerExtensions for `.md` (it
+		// would clash with Obsidian's built-in Markdown view), so the view is
+		// opened explicitly by intercepting file-open events below and via the
+		// command palette.
 		this.registerView(VIEW_TYPE_YAML, (leaf) => new YamlView(leaf, this));
-		try {
-			this.registerExtensions(YAML_EXTENSIONS, VIEW_TYPE_YAML);
-		} catch (e) {
-			// Another plugin already owns these extensions; our view can still be
-			// opened explicitly via the command below.
-			console.warn("YAML Trees: could not register extensions", e);
-			new Notice(
-				"YAML Databases: another plugin already handles .yaml/.yml files. Use the command \"Open current file in YAML Databases\" to open them here.",
-				10000
-			);
-		}
+
+		// Intercept `.yaml.md` files: when Obsidian opens one in its default
+		// Markdown view, redirect it into the YAML Databases view. A guard on
+		// the current view type prevents a redirect loop.
+		this.registerEvent(
+			this.app.workspace.on("file-open", (file: TFile | null) => {
+				if (!file || !isYamlDbFile(file.path)) return;
+				const leaf = this.app.workspace.getLeaf(false);
+				const activeType = leaf?.view?.getViewType?.();
+				if (activeType === VIEW_TYPE_YAML) return;
+				void this.openInYamlView(file);
+			})
+		);
 
 		// "New YAML database" in the folder context menu.
 		this.registerEvent(
@@ -55,14 +60,14 @@ export default class YamlTreesPlugin extends Plugin {
 		});
 
 		// Force the active YAML file open in our view, even if another plugin
-		// registered the extension. Essential on mobile where clicking the file
-		// may route elsewhere.
+		// or the default Markdown view grabbed it. Essential on mobile where
+		// clicking the file may route elsewhere.
 		this.addCommand({
 			id: "open-in-yaml-trees",
 			name: "Open current file in YAML Databases",
 			checkCallback: (checking: boolean) => {
 				const file = this.app.workspace.getActiveFile();
-				const eligible = !!file && YAML_EXTENSIONS.includes(file.extension);
+				const eligible = !!file && isYamlDbFile(file.path);
 				if (eligible && !checking) {
 					void this.openInYamlView(file as TFile);
 				}
@@ -120,18 +125,17 @@ export default class YamlTreesPlugin extends Plugin {
 		return this.app.vault.getRoot();
 	}
 
-	/** First non-colliding path like `<folder>/<base>.yaml`, `<base> 1.yaml`. */
+	/** First non-colliding path like `<folder>/<base>.yaml.md`, `<base> 1.yaml.md`. */
 	private uniquePath(folder: TFolder, base: string): string {
 		const dir = folder.isRoot() ? "" : `${folder.path}/`;
-		const ext = YAML_EXTENSIONS[0];
 		for (let i = 0; i < 1000; i++) {
 			const name = i === 0 ? base : `${base} ${i}`;
-			const candidate = normalizePath(`${dir}${name}.${ext}`);
+			const candidate = normalizePath(`${dir}${name}${YAML_MD_SUFFIX}`);
 			if (!this.app.vault.getAbstractFileByPath(candidate)) {
 				return candidate;
 			}
 		}
 		// Extremely unlikely fallback.
-		return normalizePath(`${dir}${base} ${Date.now()}.${ext}`);
+		return normalizePath(`${dir}${base} ${Date.now()}${YAML_MD_SUFFIX}`);
 	}
 }

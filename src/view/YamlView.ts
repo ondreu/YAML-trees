@@ -31,7 +31,8 @@ import { FlattenModal } from "./modals/FlattenModal";
 import { parseCsv } from "../import/csvRead";
 import { parseXlsx } from "../import/xlsxRead";
 
-// The custom main-area view for `.yaml` / `.yml` files. Extends TextFileView so
+// The custom main-area view for `.yaml.md` files (YAML stored inside Markdown
+// so Obsidian indexes the frontmatter as properties). Extends TextFileView so
 // Obsidian handles the file load/save lifecycle; we supply get/setViewData and
 // render the parsed model through the active renderer, plus export and lint.
 
@@ -325,6 +326,7 @@ export class YamlView extends TextFileView implements EditorHost {
 		this.ribbonButton(exp, "file-text", "CSV", () => this.exportCsv());
 		this.ribbonButton(exp, "sheet", "Excel", () => this.exportXlsx());
 		this.ribbonButton(exp, "file-code", "HTML", () => this.exportHtmlFile());
+		this.ribbonButton(exp, "braces", "YAML", () => this.exportYaml());
 	}
 
 	private ribbonGroup(caption: string): HTMLElement {
@@ -691,8 +693,18 @@ export class YamlView extends TextFileView implements EditorHost {
 		}
 		await this.writeSibling(
 			`${this.baseName()}.html`,
-			exportHtml(this.model, this.baseName())
+			exportHtml(this.model, this.baseName(), this.yamlText())
 		);
+	}
+
+	/** Export the database as a standalone `.yaml` file (frontmatter + body). */
+	private async exportYaml(): Promise<void> {
+		await this.writeSibling(`${this.baseName()}.yaml`, this.yamlText());
+	}
+
+	/** Deterministic YAML serialization of the current model + frontmatter. */
+	private yamlText(): string {
+		return serializeYamlWithMeta(this.frontmatter, this.model);
 	}
 
 	/** Write an export next to the current file, avoiding name collisions. */

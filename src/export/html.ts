@@ -1,7 +1,8 @@
 // Self-contained HTML export. Produces a single .html file with the data
-// embedded as JSON plus an inline viewer that renders the same style of table,
-// supports drilling into sub-databases, searching, and downloading CSV/XLSX in
-// the browser. No external requests, no dependencies.
+// embedded as JSON (for the inline viewer) plus a pre-serialized YAML string
+// (for the YAML download button). The viewer renders the same style of table,
+// supports drilling into sub-databases, searching, and downloading CSV/XLSX/YAML
+// in the browser. No external requests, no dependencies.
 
 // The viewer script is kept free of backticks and ${...} so it can be embedded
 // inside a template literal without escaping headaches.
@@ -19,6 +20,7 @@ const VIEWER_SCRIPT = [
 	"var tools=el('div','ydb-tools');var q=el('input','ydb-search');q.placeholder='Search';q.oninput=function(){draw(q.value);};tools.appendChild(q);",
 	"var bcsv=el('button','ydb-btn');bcsv.textContent='CSV';bcsv.onclick=function(){download(TITLE+'.csv','text/csv',csv(recs));};tools.appendChild(bcsv);",
 	"var bx=el('button','ydb-btn');bx.textContent='XLSX';bx.onclick=function(){downloadBytes(TITLE+'.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xlsx(recs));};tools.appendChild(bx);",
+	"var by=el('button','ydb-btn');by.textContent='YAML';by.onclick=function(){download(TITLE+'.yaml','text/yaml',window.__YAMLDB_YAML__||'');};tools.appendChild(by);",
 	"root.appendChild(tools);",
 	"var host=el('div','ydb-tablewrap');root.appendChild(host);",
 	"function draw(filter){host.innerHTML='';if(!recs){host.appendChild(txt('This level is not a table.','ydb-empty'));return;}var cols=columnsOf(recs);var t=el('table','ydb-table');var thead=el('thead');var hr=el('tr');hr.appendChild(el('th','ydb-num'));cols.forEach(function(c){var th=el('th');th.textContent=c;hr.appendChild(th);});thead.appendChild(hr);t.appendChild(thead);var tb=el('tbody');recs.forEach(function(rec,ri){var hay=cols.map(function(c){return cellText(rec[c]);}).join(' ').toLowerCase();if(filter&&hay.indexOf(filter.toLowerCase())<0)return;var tr=el('tr');var num=el('td','ydb-num');num.textContent=String(ri+1);tr.appendChild(num);cols.forEach(function(c){var td=el('td');var v=rec[c];var sub=asRecords(v);if(sub){var b=el('button','ydb-drill');b.textContent='Open ('+sub.length+')';b.onclick=(function(rec2,c2,label){return function(){stack.push({label:label,records:asRecords(rec2[c2])});render();};})(rec,c,c+' of row '+(ri+1));td.appendChild(b);}else if(typeof v==='boolean'){td.textContent=v?'yes':'no';}else{td.textContent=cellText(v);}tr.appendChild(td);});tb.appendChild(tr);});t.appendChild(tb);host.appendChild(t);}",
@@ -57,9 +59,14 @@ const VIEWER_CSS = [
 	".ydb-empty{display:block;padding:24px;color:var(--muted);text-align:center}",
 ].join("\n");
 
-/** Build the full self-contained HTML document for a dataset. */
-export function exportHtml(data: unknown, title: string): string {
+/**
+ * Build the full self-contained HTML document for a dataset.
+ * `yamlText` is the pre-serialized YAML (frontmatter + body) offered by the
+ * viewer's YAML download button; the viewer itself renders from `data` (JSON).
+ */
+export function exportHtml(data: unknown, title: string, yamlText: string): string {
 	const json = JSON.stringify(data).replace(/</g, "\\u003c");
+	const yaml = JSON.stringify(yamlText).replace(/</g, "\\u003c");
 	const safeTitle = title
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
@@ -80,6 +87,8 @@ export function exportHtml(data: unknown, title: string): string {
 			json +
 			";window.__YAMLDB_TITLE__=" +
 			JSON.stringify(title) +
+			";window.__YAMLDB_YAML__=" +
+			yaml +
 			";</script>",
 		"<script>" + VIEWER_SCRIPT + "</script>",
 		"</body>",

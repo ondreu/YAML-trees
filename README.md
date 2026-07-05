@@ -8,13 +8,19 @@ It was built for maintaining bills of materials (kusovníky) whose changes are
 tracked with `git diff`, so its output is **deterministic and diff-friendly**: a
 single edit produces a single-line change. It works just as well for any YAML.
 
-> The plugin **id** is still `yaml-trees` (matching the current repo) so existing
-> installs keep working; the display name is **YAML Databases**.
+> Databases are stored as **Markdown files** with a `.yaml.md` suffix
+> (e.g. `bom.yaml.md`). Obsidian treats them as notes, so the leading `---`
+> frontmatter block is indexed as **properties** (Bases / metadata compatible)
+> and diffs stay line-by-line; the body is raw YAML rendered by this plugin.
+>
+> The plugin **id** is still `yaml-trees` so existing installs keep working; the
+> display name is **YAML Databases**.
 
 ## Features
 
-- **Open `.yaml` / `.yml` files in the main area** by clicking them in the file
-  explorer. If another plugin owns those extensions, use the command
+- **Open `.yaml.md` files in the main area** by clicking them in the file
+  explorer — the plugin intercepts them and opens its own view instead of the
+  default Markdown view. If another plugin grabbed the file, use the command
   *Open current file in YAML Databases*.
 - **Three switchable views** (toggle in the toolbar):
   - **Table** — a spreadsheet for a list of records (rows x columns). Row
@@ -55,9 +61,10 @@ single edit produces a single-line change. It works just as well for any YAML.
 - **Linter** — built-in checks plus your own **declarative YAML rules**
   (`required`, `unique`, `type`, `min`/`max`, `enum`, `pattern`, `nonEmpty`) set
   in settings; results show in a panel from the **Lint** button.
-- **Export** — **CSV**, **XLSX** (no dependency), and a **self-contained HTML**
-  file that browses the database (with drill-down, search, and its own
-  CSV/XLSX download) offline, from the toolbar. Sub-assemblies are exploded into
+- **Export** — **CSV**, **XLSX** (no dependency), **YAML** (a standalone
+  `.yaml` dump of the database with its frontmatter), and a
+  **self-contained HTML** file that browses the database (with drill-down,
+  search, and its own CSV/XLSX/YAML download) offline, from the toolbar. Sub-assemblies are exploded into
   indented child rows (with a `Level` column) so a spreadsheet shows every part
   on its own line instead of a JSON blob in one cell.
 - **Create a new database** from the folder context menu (*New YAML database*),
@@ -69,14 +76,15 @@ single edit produces a single-line change. It works just as well for any YAML.
 
 ## Usage
 
-1. Right-click a folder → **New YAML database**, or click any existing `.yaml`
-   file in the file explorer.
+1. Right-click a folder → **New YAML database**, or create a `*.yaml.md` file
+   and click it in the file explorer.
 2. Edit in **Table**, **Form**, or **Source** mode. Changes save automatically.
 3. Commit with git — diffs stay minimal and readable.
 
-To see `.yaml`/`.yml` files in the file explorer, enable
-**Settings → Files & Links → Detect all file extensions**. (Registering the
-extension already lets the plugin open them; this setting makes them visible.)
+`.yaml.md` files are regular Markdown notes to Obsidian, so they show up in the
+file explorer and their frontmatter is available to **Bases** and metadata
+queries. The plugin renders the YAML body; the default Markdown view is replaced
+automatically when such a file is opened.
 
 ### Type inference
 
@@ -111,7 +119,7 @@ npm test         # run model round-trip / shape / coercion tests
 
 To try it in a vault, copy `main.js`, `manifest.json` and `styles.css` into
 `<vault>/.obsidian/plugins/yaml-trees/` and enable the plugin in
-**Settings → Community plugins**.
+**Settings → Community plugins**. Then create or open any `*.yaml.md` file.
 
 ## Project layout
 
