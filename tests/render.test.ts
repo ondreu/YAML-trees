@@ -199,3 +199,56 @@ test("Form view renders nested groups as separated cards", () => {
 	assert.ok(group!.querySelector(".yt-group-header"), "expected a group header");
 	assert.ok(group!.querySelector(".yt-group-body"), "expected a group body");
 });
+
+test("cmdAddSubtable converts only the selected cell, not the whole column", () => {
+	const container = document.createElement("div");
+	let inst: TableRenderer;
+	const host = makeHost(
+		[
+			{ name: "Bolt", detail: null },
+			{ name: "Nut", detail: null },
+		],
+		() => inst
+	);
+	inst = new TableRenderer(container, host);
+	inst.render();
+
+	// Select the "detail" cell of row 0, then run the ribbon Sub-table command.
+	const cell = container.querySelector<HTMLInputElement>(
+		'.yt-cell-input[data-row="0"][data-col="1"]'
+	)!;
+	cell.dispatchEvent(new win.Event("focus", { bubbles: true }));
+	inst.cmdAddSubtable();
+
+	const data = host.current() as Record<string, unknown>[];
+	// Only row 0's chosen field became a sub-table; row 1 is untouched.
+	assert.ok(Array.isArray(data[0].detail), "row 0 detail is a sub-table");
+	assert.equal(data[1].detail, null, "row 1 detail unchanged");
+	// No new column was added.
+	assert.deepEqual(Object.keys(data[0]), ["name", "detail"]);
+	// And the converted cell renders as a drillable sub-table.
+	assert.ok(container.querySelector(".yt-drill"), "drillable cell rendered");
+});
+
+test("cell menu Sub-table type makes a drillable sub-table (RMB path)", () => {
+	const container = document.createElement("div");
+	let inst: TableRenderer;
+	const host = makeHost([{ name: "Bolt", detail: null }], () => inst);
+	inst = new TableRenderer(container, host);
+	inst.render();
+
+	// Right-click the cell to open its type menu, then pick "Sub-table".
+	const td = container.querySelector<HTMLElement>(
+		'.yt-cell[data-row]'
+	) ?? container.querySelectorAll<HTMLElement>(".yt-cell")[1];
+	td.dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true }));
+	const item = (globalThis as any).__lastMenu?.find(
+		(m: { title: string }) => m.title === "Sub-table"
+	);
+	assert.ok(item, "Sub-table menu item exists");
+	item.click();
+
+	const data = host.current() as Record<string, unknown>[];
+	assert.ok(Array.isArray(data[0].detail), "cell became a sub-table array");
+	assert.equal((data[0].detail as unknown[]).length, 1, "seeded with a record");
+});

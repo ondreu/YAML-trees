@@ -58,7 +58,10 @@ export function convertCell(value: unknown, to: CellType): unknown {
 		}
 		case "subtable": {
 			if (isSubtable(value)) return value;
-			return [];
+			// Seed a starter record so the result is a real (non-empty) list of
+			// records — an empty `[]` would classify as a plain "list" cell, so the
+			// cell would never render as a drillable sub-table.
+			return [{ "field 1": null }];
 		}
 		case "object":
 			return isPlainObject(value) ? value : {};

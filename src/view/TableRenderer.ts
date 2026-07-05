@@ -902,7 +902,12 @@ export class TableRenderer extends Renderer {
 			new Notice("Select a cell first.");
 			return null;
 		}
-		return { records, columns: collectColumns(records), r: this.active.r, c: this.active.c };
+		return {
+			records,
+			columns: this.orderColumns(collectColumns(records)),
+			r: this.active.r,
+			c: this.active.c,
+		};
 	}
 
 	cmdMoveRowUp(): void {
@@ -942,10 +947,22 @@ export class TableRenderer extends Renderer {
 		this.deleteColumn(a.columns[a.c]);
 	}
 
-	/** Add a sub-table (sub-assembly) column to the current level. */
+	/**
+	 * Turn the selected cell into a sub-table (sub-assembly). Only the one chosen
+	 * field is converted; use the column header menu to add a whole sub-table
+	 * column. Falls back to adding a column when the table has no columns yet.
+	 */
 	cmdAddSubtable(): void {
 		const records = this.resolveLevel();
-		if (records) this.addSubtableColumn(records);
+		if (!records) return;
+		if (collectColumns(records).length === 0) {
+			this.addSubtableColumn(records);
+			return;
+		}
+		const a = this.activeContext();
+		if (!a) return; // activeContext shows "Select a cell first."
+		const column = a.columns[a.c];
+		this.setCellType(a.records[a.r], column, "subtable");
 	}
 
 	/** Fill the top row's values down through the selected range. */

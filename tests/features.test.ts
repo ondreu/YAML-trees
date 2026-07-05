@@ -114,7 +114,11 @@ test("cellType classifies values", () => {
 test("convertCell converts between types", () => {
 	assert.equal(convertCell("5", "number"), 5);
 	assert.deepEqual(convertCell("a, b, c", "list"), ["a", "b", "c"]);
-	assert.deepEqual(convertCell("x", "subtable"), []);
+	// Converting a scalar to a sub-table seeds a starter record so the result is
+	// a real (drillable) sub-table, not an empty list.
+	assert.deepEqual(convertCell("x", "subtable"), [{ "field 1": null }]);
+	assert.equal(cellType(convertCell("x", "subtable")), "subtable");
+	assert.deepEqual(convertCell([{ a: 1 }], "subtable"), [{ a: 1 }]);
 	assert.equal(convertCell(["a", "b"], "text"), '["a","b"]');
 });
 
