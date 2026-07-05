@@ -19,6 +19,7 @@ import { exportHtml } from "../export/html";
 import { parseRules, lintRecords, type Diagnostic } from "../lint/lint";
 import { countMatches, replaceAll, type FindOptions } from "../model/find";
 import { collectComponents } from "../model/dedupe";
+import { explodeForExport } from "../model/flatten";
 import { FindReplaceModal } from "./modals/FindReplaceModal";
 import { ComponentsModal } from "./modals/ComponentsModal";
 import { FlattenModal } from "./modals/FlattenModal";
@@ -530,7 +531,9 @@ export class YamlView extends TextFileView implements EditorHost {
 			new Notice("YAML Databases: export needs a list of records.");
 			return null;
 		}
-		return { records, columns: collectColumns(records) };
+		// Sub-assemblies are exploded into indented child rows so a spreadsheet
+		// shows every part on its own line instead of a JSON blob in one cell.
+		return explodeForExport(records);
 	}
 
 	private async exportCsv(): Promise<void> {

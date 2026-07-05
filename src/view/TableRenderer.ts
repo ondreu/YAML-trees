@@ -12,6 +12,7 @@ import {
 import {
 	moveItem,
 	reorderColumns,
+	mergeColumnOrder,
 	rangeToTsv,
 	parseClipboardTable,
 	applyPaste,
@@ -53,6 +54,14 @@ export class TableRenderer extends Renderer {
 	private path: DrillStep[] = [];
 	/** Column pixel widths by column name (session-persistent). */
 	private widths = new Map<string, number>();
+	/**
+	 * Explicit display order for columns at the current level. Needed because a
+	 * column present in only some records (e.g. a sparse sub-table column) cannot
+	 * be reordered by rewriting per-record key order alone: `collectColumns`
+	 * re-derives a global order from first-seen keys and would ignore the move.
+	 * Reset whenever we drill to a different level.
+	 */
+	private columnOrder: string[] | null = null;
 	/** Selection anchor and focus (the active cell). */
 	private anchor: Cell | null = null;
 	private active: Cell | null = null;
@@ -89,7 +98,7 @@ export class TableRenderer extends Renderer {
 		}
 
 		const records = level;
-		const columns = collectColumns(records);
+		const columns = this.orderColumns(collectColumns(records));
 		this.computeSchema(records);
 
 		this.renderControls(records, columns);
@@ -128,6 +137,11 @@ export class TableRenderer extends Renderer {
 		}
 		this.path = validPath;
 		return cur;
+	}
+
+	/** Apply the explicit column-order override (if any) to a column set. */
+	private orderColumns(columns: string[]): string[] {
+		return mergeColumnOrder(columns, this.columnOrder);
 	}
 
 	// --- Schema (rules) -------------------------------------------------
@@ -243,6 +257,7 @@ export class TableRenderer extends Renderer {
 		const root = bar.createSpan({ cls: "yt-crumb", text: this.host.baseName() });
 		root.addEventListener("click", () => {
 			this.path = [];
+			this.columnOrder = null;
 			this.clearSelection();
 			this.host.rerender();
 		});
@@ -251,6 +266,7 @@ export class TableRenderer extends Renderer {
 			const crumb = bar.createSpan({ cls: "yt-crumb", text: step.label });
 			crumb.addEventListener("click", () => {
 				this.path = this.path.slice(0, i + 1);
+				this.columnOrder = null;
 				this.clearSelection();
 				this.host.rerender();
 			});
@@ -749,6 +765,9 @@ export class TableRenderer extends Renderer {
 			return;
 		}
 		this.widths.set(next, this.widths.get(from) ?? 0);
+		if (this.columnOrder) {
+			this.columnOrder = this.columnOrder.map((c) => (c === from ? next : c));
+		}
 		for (const record of records) {
 			if (!(from in record)) continue;
 			const rebuilt: Record<string, unknown> = {};
@@ -775,6 +794,10 @@ export class TableRenderer extends Renderer {
 		const records = this.resolveLevel();
 		if (!records) return;
 		reorderColumns(records, order);
+		// Remember the requested order so sparse columns (present in only some
+		// records) still move; a per-record key rewrite alone would be undone by
+		// collectColumns re-deriving a global order on the next render.
+		this.columnOrder = order;
 		this.pendingHeaderFocus = to;
 		this.host.replaceData(this.host.getData());
 	}
@@ -795,6 +818,7 @@ export class TableRenderer extends Renderer {
 				Object.assign(record, rebuilt);
 			}
 		}
+		if (this.columnOrder) this.columnOrder = order;
 		this.pendingHeaderFocus = at;
 		this.host.replaceData(this.host.getData());
 	}
@@ -819,6 +843,7 @@ export class TableRenderer extends Renderer {
 			Object.values(records[rowIndex])[0]) as unknown;
 		const label = `${column} of ${formatScalar(first) || `row ${rowIndex + 1}`}`;
 		this.path.push({ row: rowIndex, col: column, label });
+		this.columnOrder = null;
 		this.clearSelection();
 		this.host.rerender();
 	}
@@ -1226,10 +1251,17 @@ export class TableRenderer extends Renderer {
 	}
 
 	private addSubtableColumn(records: Record<string, unknown>[]): void {
-		const name = nextColumnName(collectColumns(records));
+		const columns = this.orderColumns(collectColumns(records));
+		const name = nextColumnName(columns);
+		// Seed every cell with a starter record so the column is recognised as a
+		// sub-table (a non-empty list of records) and renders with the expand /
+		// drill affordance. An empty `[]` would classify as a plain list column,
+		// which is exactly the "it just added a normal column" bug.
 		for (const record of records) {
-			record[name] = [];
+			record[name] = [{ "field 1": null }];
 		}
+		if (this.columnOrder) this.columnOrder.push(name);
+		this.pendingHeaderFocus = columns.length;
 		this.host.replaceData(this.host.getData());
 	}
 

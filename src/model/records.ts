@@ -108,6 +108,25 @@ export function applyPaste(
 	return records;
 }
 
+/**
+ * Merge an explicit display order with the actual column set. Columns named in
+ * `order` come first, in that order (skipping any that no longer exist); columns
+ * absent from `order` (newly added) keep their natural position at the end. This
+ * lets the table honour a user's column reordering even for sparse columns that
+ * only appear in some records.
+ */
+export function mergeColumnOrder(
+	columns: string[],
+	order: string[] | null
+): string[] {
+	if (!order) return columns;
+	const present = new Set(columns);
+	const preferred = order.filter((c) => present.has(c));
+	const seen = new Set(preferred);
+	const rest = columns.filter((c) => !seen.has(c));
+	return [...preferred, ...rest];
+}
+
 /** A column name not already present, like "field 1". */
 export function nextColumnName(existing: string[]): string {
 	const set = new Set(existing);

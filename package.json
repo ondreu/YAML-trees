@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"test": "esbuild tests/model.test.ts --bundle --platform=node --format=cjs --outfile=tests/model.test.cjs && esbuild tests/features.test.ts --bundle --platform=node --format=cjs --outfile=tests/features.test.cjs && esbuild tests/batch1.test.ts --bundle --platform=node --format=cjs --outfile=tests/batch1.test.cjs && esbuild tests/batch2.test.ts --bundle --platform=node --format=cjs --outfile=tests/batch2.test.cjs && esbuild tests/render.test.ts --bundle --platform=node --format=cjs --external:jsdom --alias:obsidian=./tests/obsidian-stub.ts --outfile=tests/render.test.cjs && node --test tests/model.test.cjs tests/features.test.cjs tests/batch1.test.cjs tests/batch2.test.cjs tests/render.test.cjs",
+		"test": "esbuild tests/model.test.ts --bundle --platform=node --format=cjs --outfile=tests/model.test.cjs && esbuild tests/features.test.ts --bundle --platform=node --format=cjs --outfile=tests/features.test.cjs && esbuild tests/batch1.test.ts --bundle --platform=node --format=cjs --outfile=tests/batch1.test.cjs && esbuild tests/batch2.test.ts --bundle --platform=node --format=cjs --outfile=tests/batch2.test.cjs && esbuild tests/batch3.test.ts --bundle --platform=node --format=cjs --outfile=tests/batch3.test.cjs && esbuild tests/render.test.ts --bundle --platform=node --format=cjs --external:jsdom --alias:obsidian=./tests/obsidian-stub.ts --outfile=tests/render.test.cjs && node --test tests/model.test.cjs tests/features.test.cjs tests/batch1.test.cjs tests/batch2.test.cjs tests/batch3.test.cjs tests/render.test.cjs",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [

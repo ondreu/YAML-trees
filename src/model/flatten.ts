@@ -105,4 +105,93 @@ export function flatRowsToRecords(
 	});
 }
 
+/**
+ * Explode a hierarchical BOM into a flat, Excel-friendly row list for export.
+ *
+ * Sub-assemblies used to be written as a JSON blob in a single cell. Instead we
+ * emit every part on its own row, add a leading `Level` column, expand each
+ * sub-table's records as indented child rows directly beneath their parent, and
+ * indent the name column so the hierarchy is readable in a spreadsheet.
+ *
+ * When the data contains no sub-tables at all, the records are returned as-is
+ * (no `Level` column) so flat databases export exactly as before.
+ */
+export function explodeForExport(records: Record<string, unknown>[]): {
+	records: Record<string, unknown>[];
+	columns: string[];
+} {
+	let nested = false;
+	const scan = (recs: Record<string, unknown>[]): void => {
+		for (const r of recs) {
+			for (const k of Object.keys(r)) {
+				if (isRecords(r[k])) {
+					nested = true;
+					scan(r[k] as Record<string, unknown>[]);
+				}
+			}
+		}
+	};
+	scan(records);
+
+	// Flat data: keep the original columns and rows untouched.
+	if (!nested) {
+		const columns: string[] = [];
+		const seen = new Set<string>();
+		for (const r of records) {
+			for (const k of Object.keys(r)) {
+				if (!seen.has(k)) {
+					seen.add(k);
+					columns.push(k);
+				}
+			}
+		}
+		return { records, columns };
+	}
+
+	const { nameKey } = detectKeys(records);
+
+	// Collect the scalar columns across every level, in first-seen order.
+	const scalarCols: string[] = [];
+	const seen = new Set<string>();
+	const collectScalar = (recs: Record<string, unknown>[]): void => {
+		for (const r of recs) {
+			for (const k of Object.keys(r)) {
+				const v = r[k];
+				if (isRecords(v)) {
+					collectScalar(v as Record<string, unknown>[]);
+					continue;
+				}
+				if (!seen.has(k)) {
+					seen.add(k);
+					scalarCols.push(k);
+				}
+			}
+		}
+	};
+	collectScalar(records);
+
+	const INDENT = "    ";
+	const out: Record<string, unknown>[] = [];
+	const emit = (recs: Record<string, unknown>[], level: number): void => {
+		for (const r of recs) {
+			const row: Record<string, unknown> = { Level: level + 1 };
+			for (const k of scalarCols) {
+				const v = r[k];
+				row[k] = isRecords(v) ? null : (v ?? null);
+			}
+			// Indent the name so nesting is visible in a flat spreadsheet.
+			if (level > 0 && typeof r[nameKey] === "string") {
+				row[nameKey] = INDENT.repeat(level) + (r[nameKey] as string);
+			}
+			out.push(row);
+			for (const k of Object.keys(r)) {
+				if (isRecords(r[k])) emit(r[k] as Record<string, unknown>[], level + 1);
+			}
+		}
+	};
+	emit(records, 0);
+
+	return { records: out, columns: ["Level", ...scalarCols] };
+}
+
 export { isRecords };
