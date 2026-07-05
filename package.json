@@ -1,6 +1,6 @@
 {
 	"name": "yaml-trees",
-	"version": "0.1.0-beta.6",
+	"version": "0.1.0-beta.7",
 	"description": "Obsidian plugin to view, create and edit YAML files as interactive tables, forms or raw source.",
 	"main": "main.js",
 	"scripts": {

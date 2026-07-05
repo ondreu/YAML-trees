@@ -162,19 +162,27 @@
 	padding: 0 4px;
 }
 
+/* Collapse the whole ribbon to a single row: no captions, big buttons become
+ * icon+label side-by-side, and the stacked mini-command columns lay out in a
+ * row. This makes the ribbon one button tall. */
 .is-mobile .yaml-trees-view .yt-rgroup-cap {
 	display: none;
 }
 
+.is-mobile .yaml-trees-view .yt-rgroup-body {
+	align-items: center;
+}
+
 .is-mobile .yaml-trees-view .yt-rdiv {
-	margin: 3px 2px;
+	margin: 2px;
 }
 
 .is-mobile .yaml-trees-view .yt-rb {
-	min-width: 40px;
-	gap: 2px;
-	padding: 3px 5px;
-	font-size: 10px;
+	flex-direction: row;
+	min-width: 0;
+	gap: 5px;
+	padding: 5px 8px;
+	font-size: 12px;
 }
 
 .is-mobile .yaml-trees-view .yt-rb-icon svg {
@@ -182,15 +190,20 @@
 	height: 17px;
 }
 
+.is-mobile .yaml-trees-view .yt-rb-mini-col {
+	flex-direction: row;
+	gap: 2px;
+}
+
 .is-mobile .yaml-trees-view .yt-rb-mini {
-	gap: 4px;
-	padding: 2px 6px 2px 4px;
-	font-size: 11px;
+	gap: 5px;
+	padding: 5px 8px;
+	font-size: 12px;
 }
 
 .is-mobile .yaml-trees-view .yt-rb-mini-icon svg {
-	width: 13px;
-	height: 13px;
+	width: 16px;
+	height: 16px;
 }
 
 /* --- Editor area ------------------------------------------------------- */
