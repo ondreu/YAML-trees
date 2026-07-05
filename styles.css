@@ -1,10 +1,10 @@
 /*
- * YAML Databases styles. Scoped under .yaml-trees-view and built entirely from
+ * YAML Databases styles. Scoped under .yaml-databases-view and built entirely from
  * Obsidian's CSS variables, so the UI matches light/dark and community themes.
  * No hard-coded colours, no non-ASCII content.
  */
 
-.yaml-trees-view {
+.yaml-databases-view {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -18,7 +18,7 @@
  * sheet scrolls. Without this, focusing a cell makes the OS keyboard scroll the
  * outer .view-content and the whole UI slides off-screen.
  */
-.workspace-leaf-content[data-type="yaml-trees-view"] .view-content {
+.workspace-leaf-content[data-type="yaml-databases-view"] .view-content {
 	padding: 0;
 	overflow: hidden;
 	display: flex;
@@ -27,7 +27,7 @@
 
 /* --- Ribbon (Excel-style command bar) --------------------------------- */
 
-.yaml-trees-view .yt-ribbon {
+.yaml-databases-view .yt-ribbon {
 	flex: 0 0 auto;
 	display: flex;
 	align-items: stretch;
@@ -38,28 +38,28 @@
 	overflow-x: auto;
 }
 
-.yaml-trees-view .yt-rgroup {
+.yaml-databases-view .yt-rgroup {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	padding: 0 var(--size-4-2);
 }
 
-.yaml-trees-view .yt-rgroup-body {
+.yaml-databases-view .yt-rgroup-body {
 	display: flex;
 	align-items: flex-start;
 	gap: 2px;
 	flex: 1;
 }
 
-.yaml-trees-view .yt-rgroup-cap {
+.yaml-databases-view .yt-rgroup-cap {
 	font-size: 10px;
 	color: var(--text-faint);
 	margin-top: 2px;
 	letter-spacing: 0.02em;
 }
 
-.yaml-trees-view .yt-rdiv {
+.yaml-databases-view .yt-rdiv {
 	width: 1px;
 	background: var(--background-modifier-border);
 	margin: var(--size-4-1) var(--size-4-1);
@@ -67,7 +67,7 @@
 }
 
 /* Large icon-over-label button. */
-.yaml-trees-view .yt-rb {
+.yaml-databases-view .yt-rb {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -85,32 +85,32 @@
 	white-space: nowrap;
 }
 
-.yaml-trees-view .yt-rb:hover {
+.yaml-databases-view .yt-rb:hover {
 	background: var(--background-modifier-hover);
 }
 
-.yaml-trees-view .yt-rb.is-active {
+.yaml-databases-view .yt-rb.is-active {
 	background: var(--background-modifier-active-hover, rgba(120, 120, 250, 0.15));
 	color: var(--text-accent);
 }
 
-.yaml-trees-view .yt-rb-icon {
+.yaml-databases-view .yt-rb-icon {
 	display: inline-flex;
 }
 
-.yaml-trees-view .yt-rb-icon svg {
+.yaml-databases-view .yt-rb-icon svg {
 	width: 20px;
 	height: 20px;
 }
 
 /* Stacked mini commands. */
-.yaml-trees-view .yt-rb-mini-col {
+.yaml-databases-view .yt-rb-mini-col {
 	display: flex;
 	flex-direction: column;
 	gap: 1px;
 }
 
-.yaml-trees-view .yt-rb-mini {
+.yaml-databases-view .yt-rb-mini {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -125,26 +125,26 @@
 	box-shadow: none;
 }
 
-.yaml-trees-view .yt-rb-mini:hover {
+.yaml-databases-view .yt-rb-mini:hover {
 	background: var(--background-modifier-hover);
 }
 
-.yaml-trees-view .yt-rb-mini-icon {
+.yaml-databases-view .yt-rb-mini-icon {
 	display: inline-flex;
 	color: var(--text-muted);
 }
 
-.yaml-trees-view .yt-rb-mini-icon svg {
+.yaml-databases-view .yt-rb-mini-icon svg {
 	width: 15px;
 	height: 15px;
 }
 
-.yaml-trees-view .yt-btn-icon {
+.yaml-databases-view .yt-btn-icon {
 	display: inline-flex;
 	align-items: center;
 }
 
-.yaml-trees-view .yt-btn-icon svg {
+.yaml-databases-view .yt-btn-icon svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
@@ -154,30 +154,30 @@
  * unchanged: drop the group captions and tighten button/icon/padding sizes so
  * the ribbon takes far less vertical and horizontal space.
  */
-.is-mobile .yaml-trees-view .yt-ribbon {
+.is-mobile .yaml-databases-view .yt-ribbon {
 	padding: 2px 4px;
 }
 
-.is-mobile .yaml-trees-view .yt-rgroup {
+.is-mobile .yaml-databases-view .yt-rgroup {
 	padding: 0 4px;
 }
 
 /* Collapse the whole ribbon to a single row: no captions, big buttons become
  * icon+label side-by-side, and the stacked mini-command columns lay out in a
  * row. This makes the ribbon one button tall. */
-.is-mobile .yaml-trees-view .yt-rgroup-cap {
+.is-mobile .yaml-databases-view .yt-rgroup-cap {
 	display: none;
 }
 
-.is-mobile .yaml-trees-view .yt-rgroup-body {
+.is-mobile .yaml-databases-view .yt-rgroup-body {
 	align-items: center;
 }
 
-.is-mobile .yaml-trees-view .yt-rdiv {
+.is-mobile .yaml-databases-view .yt-rdiv {
 	margin: 2px;
 }
 
-.is-mobile .yaml-trees-view .yt-rb {
+.is-mobile .yaml-databases-view .yt-rb {
 	flex-direction: row;
 	min-width: 0;
 	gap: 5px;
@@ -185,30 +185,30 @@
 	font-size: 12px;
 }
 
-.is-mobile .yaml-trees-view .yt-rb-icon svg {
+.is-mobile .yaml-databases-view .yt-rb-icon svg {
 	width: 17px;
 	height: 17px;
 }
 
-.is-mobile .yaml-trees-view .yt-rb-mini-col {
+.is-mobile .yaml-databases-view .yt-rb-mini-col {
 	flex-direction: row;
 	gap: 2px;
 }
 
-.is-mobile .yaml-trees-view .yt-rb-mini {
+.is-mobile .yaml-databases-view .yt-rb-mini {
 	gap: 5px;
 	padding: 5px 8px;
 	font-size: 12px;
 }
 
-.is-mobile .yaml-trees-view .yt-rb-mini-icon svg {
+.is-mobile .yaml-databases-view .yt-rb-mini-icon svg {
 	width: 16px;
 	height: 16px;
 }
 
 /* --- Editor area ------------------------------------------------------- */
 
-.yaml-trees-view .yt-editor {
+.yaml-databases-view .yt-editor {
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow: hidden;
@@ -218,7 +218,7 @@
 
 /* --- Breadcrumb (sub-database drill-down) ------------------------------ */
 
-.yaml-trees-view .yt-breadcrumb {
+.yaml-databases-view .yt-breadcrumb {
 	flex: 0 0 auto;
 	display: flex;
 	align-items: center;
@@ -228,22 +228,22 @@
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-crumb {
+.yaml-databases-view .yt-crumb {
 	cursor: pointer;
 	color: var(--text-accent);
 }
 
-.yaml-trees-view .yt-crumb:hover {
+.yaml-databases-view .yt-crumb:hover {
 	text-decoration: underline;
 }
 
-.yaml-trees-view .yt-crumb-sep {
+.yaml-databases-view .yt-crumb-sep {
 	color: var(--text-faint);
 }
 
 /* --- Lint panel -------------------------------------------------------- */
 
-.yaml-trees-view .yt-lint {
+.yaml-databases-view .yt-lint {
 	flex: 0 0 auto;
 	max-height: 30%;
 	overflow: auto;
@@ -252,34 +252,34 @@
 	background: var(--background-secondary);
 }
 
-.yaml-trees-view .yt-lint-header {
+.yaml-databases-view .yt-lint-header {
 	font-weight: var(--font-semibold);
 	margin-bottom: var(--size-4-1);
 }
 
-.yaml-trees-view .yt-lint-empty {
+.yaml-databases-view .yt-lint-empty {
 	color: var(--text-muted);
 }
 
-.yaml-trees-view .yt-lint-item {
+.yaml-databases-view .yt-lint-item {
 	padding: var(--size-4-1) var(--size-4-2);
 	border-radius: var(--radius-s);
 	font-size: var(--font-ui-smaller);
 	margin-bottom: 2px;
 }
 
-.yaml-trees-view .yt-lint-item.is-error {
+.yaml-databases-view .yt-lint-item.is-error {
 	color: var(--text-error);
 	background: var(--background-modifier-error);
 }
 
-.yaml-trees-view .yt-lint-item.is-warning {
+.yaml-databases-view .yt-lint-item.is-warning {
 	color: var(--text-warning, var(--text-muted));
 }
 
 /* --- Metadata (frontmatter) panel ------------------------------------- */
 
-.yaml-trees-view .yt-meta {
+.yaml-databases-view .yt-meta {
 	flex: 0 0 auto;
 	max-height: 40%;
 	overflow: auto;
@@ -288,31 +288,31 @@
 	background: var(--background-secondary);
 }
 
-.yaml-trees-view .yt-meta-header {
+.yaml-databases-view .yt-meta-header {
 	display: flex;
 	align-items: baseline;
 	gap: var(--size-4-2);
 	margin-bottom: var(--size-4-2);
 }
 
-.yaml-trees-view .yt-meta-title {
+.yaml-databases-view .yt-meta-title {
 	font-weight: var(--font-semibold);
 }
 
-.yaml-trees-view .yt-meta-hint,
-.yaml-trees-view .yt-meta-empty {
+.yaml-databases-view .yt-meta-hint,
+.yaml-databases-view .yt-meta-empty {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-meta-row {
+.yaml-databases-view .yt-meta-row {
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-2);
 	padding: 3px 0;
 }
 
-.yaml-trees-view .yt-meta-key-label {
+.yaml-databases-view .yt-meta-key-label {
 	flex: 0 0 30%;
 	max-width: 240px;
 	font-weight: var(--font-medium);
@@ -322,8 +322,8 @@
 	white-space: nowrap;
 }
 
-.yaml-trees-view .yt-meta-value,
-.yaml-trees-view .yt-meta-key {
+.yaml-databases-view .yt-meta-value,
+.yaml-databases-view .yt-meta-key {
 	flex: 1 1 auto;
 	padding: 4px 8px;
 	border: 1px solid var(--background-modifier-border);
@@ -332,7 +332,7 @@
 	color: var(--text-normal);
 }
 
-.yaml-trees-view .yt-meta-adder {
+.yaml-databases-view .yt-meta-adder {
 	margin-top: var(--size-4-2);
 	padding-top: var(--size-4-2);
 	border-top: 1px dashed var(--background-modifier-border);
@@ -340,7 +340,7 @@
 
 /* --- Table controls (filter / sort) ----------------------------------- */
 
-.yaml-trees-view .yt-table-controls {
+.yaml-databases-view .yt-table-controls {
 	flex: 0 0 auto;
 	display: flex;
 	align-items: center;
@@ -348,7 +348,7 @@
 	padding: var(--size-4-1) 0 var(--size-4-2);
 }
 
-.yaml-trees-view .yt-filter-input {
+.yaml-databases-view .yt-filter-input {
 	flex: 0 1 18rem;
 	padding: var(--size-4-1) var(--size-4-2);
 	background: var(--background-primary);
@@ -358,7 +358,7 @@
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-filter-clear {
+.yaml-databases-view .yt-filter-clear {
 	background: transparent;
 	border: none;
 	color: var(--text-accent);
@@ -367,7 +367,7 @@
 	box-shadow: none;
 }
 
-.yaml-trees-view .yt-col-sort {
+.yaml-databases-view .yt-col-sort {
 	display: inline-flex;
 	vertical-align: middle;
 	margin-left: 2px;
@@ -375,16 +375,16 @@
 	cursor: pointer;
 }
 
-.yaml-trees-view .yt-col-sort.is-active {
+.yaml-databases-view .yt-col-sort.is-active {
 	color: var(--text-accent);
 }
 
-.yaml-trees-view .yt-col-sort svg {
+.yaml-databases-view .yt-col-sort svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
 
-.yaml-trees-view .yt-cell-select {
+.yaml-databases-view .yt-cell-select {
 	width: 100%;
 	border: none;
 	background: transparent;
@@ -393,13 +393,13 @@
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-cell-invalid {
+.yaml-databases-view .yt-cell-invalid {
 	box-shadow: inset 0 0 0 2px var(--text-error);
 }
 
 /* --- Spreadsheet ------------------------------------------------------- */
 
-.yaml-trees-view .yt-sheet-scroll {
+.yaml-databases-view .yt-sheet-scroll {
 	flex: 1 1 auto;
 	overflow: auto;
 	/* Keep a focused cell clear of the sticky header when scrolled into view. */
@@ -407,7 +407,7 @@
 	-webkit-overflow-scrolling: touch;
 }
 
-.yaml-trees-view .yt-sheet {
+.yaml-databases-view .yt-sheet {
 	border-collapse: separate;
 	border-spacing: 0;
 	table-layout: fixed;
@@ -416,8 +416,8 @@
 
 /* Every header/data cell draws its own right + bottom border so the grid
  * stays intact while the header and gutter are sticky. */
-.yaml-trees-view .yt-sheet th,
-.yaml-trees-view .yt-sheet td {
+.yaml-databases-view .yt-sheet th,
+.yaml-databases-view .yt-sheet td {
 	border-right: 1px solid var(--background-modifier-border);
 	border-bottom: 1px solid var(--background-modifier-border);
 	padding: 0;
@@ -428,7 +428,7 @@
 }
 
 /* Column headers: sticky to the top. */
-.yaml-trees-view .yt-sheet thead th {
+.yaml-databases-view .yt-sheet thead th {
 	position: sticky;
 	top: 0;
 	z-index: 2;
@@ -438,11 +438,11 @@
 
 /* Fixed table layout takes column widths from the header row, so set them
  * here; long cell values clip rather than stretching the grid. */
-.yaml-trees-view .yt-colhead {
+.yaml-databases-view .yt-colhead {
 	width: 12em;
 }
 
-.yaml-trees-view .yt-colhead-input {
+.yaml-databases-view .yt-colhead-input {
 	width: 100%;
 	box-sizing: border-box;
 	border: none;
@@ -455,13 +455,13 @@
 	border-radius: 0;
 }
 
-.yaml-trees-view .yt-colhead-input:focus {
+.yaml-databases-view .yt-colhead-input:focus {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: -2px;
 }
 
 /* Row-number gutter: sticky to the left. */
-.yaml-trees-view .yt-rownum {
+.yaml-databases-view .yt-rownum {
 	position: sticky;
 	left: 0;
 	z-index: 1;
@@ -477,14 +477,14 @@
 	border-left: 1px solid var(--background-modifier-border);
 }
 
-.yaml-trees-view .yt-rownum:hover {
+.yaml-databases-view .yt-rownum:hover {
 	color: var(--text-normal);
 	background: var(--background-modifier-hover);
 }
 
 /* Row grabber dots: hidden until the row is hovered, then swapped in for the
    row number as an obvious drag handle. */
-.yaml-trees-view .yt-row-grip {
+.yaml-databases-view .yt-row-grip {
 	display: none;
 	align-items: center;
 	justify-content: center;
@@ -492,26 +492,26 @@
 	cursor: grab;
 }
 
-.yaml-trees-view .yt-row-grip svg {
+.yaml-databases-view .yt-row-grip svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
 
-.yaml-trees-view tbody tr:hover .yt-row-grip {
+.yaml-databases-view tbody tr:hover .yt-row-grip {
 	display: inline-flex;
 }
 
-.yaml-trees-view tbody tr:hover .yt-rownum-label {
+.yaml-databases-view tbody tr:hover .yt-rownum-label {
 	display: none;
 }
 
-.yaml-trees-view .yt-rownum.yt-dragging .yt-row-grip {
+.yaml-databases-view .yt-rownum.yt-dragging .yt-row-grip {
 	color: var(--interactive-accent);
 	cursor: grabbing;
 }
 
 /* Corner cell sits above both sticky axes. */
-.yaml-trees-view .yt-corner {
+.yaml-databases-view .yt-corner {
 	position: sticky;
 	left: 0;
 	top: 0;
@@ -523,7 +523,7 @@
 }
 
 /* Add-column / add-row affordances. */
-.yaml-trees-view .yt-addcol {
+.yaml-databases-view .yt-addcol {
 	width: 2.4em;
 	min-width: 2.4em;
 	text-align: center;
@@ -532,16 +532,16 @@
 	font-weight: var(--font-semibold);
 }
 
-.yaml-trees-view .yt-addcol:hover {
+.yaml-databases-view .yt-addcol:hover {
 	color: var(--text-normal);
 	background: var(--background-modifier-hover);
 }
 
-.yaml-trees-view .yt-cell-spacer {
+.yaml-databases-view .yt-cell-spacer {
 	background: var(--background-primary);
 }
 
-.yaml-trees-view .yt-addrow-cell {
+.yaml-databases-view .yt-addrow-cell {
 	padding: var(--size-4-1) var(--size-4-2);
 	color: var(--text-muted);
 	cursor: pointer;
@@ -549,17 +549,17 @@
 	background: var(--background-primary);
 }
 
-.yaml-trees-view .yt-addrow-cell:hover {
+.yaml-databases-view .yt-addrow-cell:hover {
 	color: var(--text-normal);
 	background: var(--background-modifier-hover);
 }
 
 /* Data cells. */
-.yaml-trees-view tbody tr:hover .yt-rownum {
+.yaml-databases-view tbody tr:hover .yt-rownum {
 	color: var(--text-normal);
 }
 
-.yaml-trees-view .yt-cell-input {
+.yaml-databases-view .yt-cell-input {
 	width: 100%;
 	box-sizing: border-box;
 	border: none;
@@ -573,21 +573,21 @@
 	text-overflow: ellipsis;
 }
 
-.yaml-trees-view .yt-cell-input:focus {
+.yaml-databases-view .yt-cell-input:focus {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: -2px;
 	background: var(--background-primary);
 }
 
-.yaml-trees-view .yt-cell-checkbox {
+.yaml-databases-view .yt-cell-checkbox {
 	margin: var(--size-4-1) var(--size-4-2);
 }
 
-.yaml-trees-view .yt-cell-readonly {
+.yaml-databases-view .yt-cell-readonly {
 	background: var(--background-primary-alt);
 }
 
-.yaml-trees-view .yt-cell-nested {
+.yaml-databases-view .yt-cell-nested {
 	display: inline-block;
 	padding: var(--size-4-1) var(--size-4-2);
 	color: var(--text-muted);
@@ -597,23 +597,23 @@
 
 /* --- Column grip / resize / drag --------------------------------------- */
 
-.yaml-trees-view .yt-colhead {
+.yaml-databases-view .yt-colhead {
 	position: relative;
 }
 
-.yaml-trees-view .yt-col-grip {
+.yaml-databases-view .yt-col-grip {
 	display: inline-flex;
 	vertical-align: middle;
 	color: var(--text-faint);
 	cursor: grab;
 }
 
-.yaml-trees-view .yt-col-grip svg {
+.yaml-databases-view .yt-col-grip svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
 
-.yaml-trees-view .yt-col-resize {
+.yaml-databases-view .yt-col-resize {
 	position: absolute;
 	top: 0;
 	right: 0;
@@ -622,43 +622,43 @@
 	cursor: col-resize;
 }
 
-.yaml-trees-view .yt-col-resize:hover {
+.yaml-databases-view .yt-col-resize:hover {
 	background: var(--interactive-accent);
 	opacity: 0.5;
 }
 
-.yaml-trees-view .yt-drop-target {
+.yaml-databases-view .yt-drop-target {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: -2px;
 }
 
-.yaml-trees-view .yt-col-grip,
-.yaml-trees-view .yt-rownum {
+.yaml-databases-view .yt-col-grip,
+.yaml-databases-view .yt-rownum {
 	touch-action: none; /* let pointer-drag work without the page scrolling */
 }
 
-.yaml-trees-view .yt-dragging {
+.yaml-databases-view .yt-dragging {
 	opacity: 0.6;
 }
 
 /* Freeze the first data column while scrolling horizontally. */
-.yaml-trees-view .yt-colhead.yt-frozen,
-.yaml-trees-view .yt-cell.yt-frozen {
+.yaml-databases-view .yt-colhead.yt-frozen,
+.yaml-databases-view .yt-cell.yt-frozen {
 	position: sticky;
 	left: 3em;
 	z-index: 1;
 }
 
-.yaml-trees-view thead .yt-colhead.yt-frozen {
+.yaml-databases-view thead .yt-colhead.yt-frozen {
 	z-index: 3;
 }
 
-.yaml-trees-view .yt-cell.yt-frozen {
+.yaml-databases-view .yt-cell.yt-frozen {
 	background: var(--background-primary);
 }
 
 /* Sub-assembly expand toggle + inline preview. */
-.yaml-trees-view .yt-subexpand {
+.yaml-databases-view .yt-subexpand {
 	display: inline-flex;
 	vertical-align: middle;
 	color: var(--text-muted);
@@ -666,19 +666,19 @@
 	margin: 0 2px;
 }
 
-.yaml-trees-view .yt-subexpand svg {
+.yaml-databases-view .yt-subexpand svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
 
-.yaml-trees-view .yt-subrow-cell {
+.yaml-databases-view .yt-subrow-cell {
 	background: var(--background-secondary);
 	padding: var(--size-4-2) var(--size-4-2) var(--size-4-2) var(--size-4-4);
 	/* An accent rail ties the nested block to its parent row. */
 	box-shadow: inset 3px 0 0 0 var(--interactive-accent);
 }
 
-.yaml-trees-view .yt-subrow-header {
+.yaml-databases-view .yt-subrow-header {
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-2);
@@ -691,7 +691,7 @@
 }
 
 /* The nested table is presented as a self-contained rounded card. */
-.yaml-trees-view .yt-subtable {
+.yaml-databases-view .yt-subtable {
 	border-collapse: separate;
 	border-spacing: 0;
 	font-size: var(--font-ui-smaller);
@@ -701,42 +701,42 @@
 	background: var(--background-primary);
 }
 
-.yaml-trees-view .yt-subtable th,
-.yaml-trees-view .yt-subtable td {
+.yaml-databases-view .yt-subtable th,
+.yaml-databases-view .yt-subtable td {
 	border-right: 1px solid var(--background-modifier-border);
 	border-bottom: 1px solid var(--background-modifier-border);
 	padding: 3px var(--size-4-2);
 	text-align: left;
 }
 
-.yaml-trees-view .yt-subtable tr td:last-child,
-.yaml-trees-view .yt-subtable tr th:last-child {
+.yaml-databases-view .yt-subtable tr td:last-child,
+.yaml-databases-view .yt-subtable tr th:last-child {
 	border-right: 0;
 }
 
-.yaml-trees-view .yt-subtable tbody tr:last-child td {
+.yaml-databases-view .yt-subtable tbody tr:last-child td {
 	border-bottom: 0;
 }
 
-.yaml-trees-view .yt-subtable tbody tr:nth-child(even) td {
+.yaml-databases-view .yt-subtable tbody tr:nth-child(even) td {
 	background: var(--background-secondary);
 }
 
-.yaml-trees-view .yt-subtable thead th {
+.yaml-databases-view .yt-subtable thead th {
 	background: var(--background-primary-alt);
 	font-weight: var(--font-semibold);
 	color: var(--text-muted);
 }
 
 /* Totals footer row. */
-.yaml-trees-view .yt-totals .yt-totals-cell {
+.yaml-databases-view .yt-totals .yt-totals-cell {
 	background: var(--background-secondary);
 	font-weight: var(--font-semibold);
 	padding: var(--size-4-1) var(--size-4-2);
 	font-variant-numeric: tabular-nums;
 }
 
-.yaml-trees-view .yt-totals-num {
+.yaml-databases-view .yt-totals-num {
 	position: sticky;
 	left: 0;
 	z-index: 1;
@@ -752,15 +752,15 @@
 
 /* --- Cell selection / special cell types ------------------------------- */
 
-.yaml-trees-view .yt-cell.is-selected {
+.yaml-databases-view .yt-cell.is-selected {
 	background: var(--text-selection, rgba(120, 120, 250, 0.15));
 }
 
-.yaml-trees-view .yt-cell.is-active {
+.yaml-databases-view .yt-cell.is-active {
 	box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
-.yaml-trees-view .yt-drill {
+.yaml-databases-view .yt-drill {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--size-4-1);
@@ -774,21 +774,21 @@
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-drill:hover {
+.yaml-databases-view .yt-drill:hover {
 	background: var(--background-modifier-hover);
 }
 
-.yaml-trees-view .yt-drill svg {
+.yaml-databases-view .yt-drill svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
 
-.yaml-trees-view .yt-cell-multiline {
+.yaml-databases-view .yt-cell-multiline {
 	font-style: italic;
 	cursor: pointer;
 }
 
-.yaml-trees-view .yt-cell-list {
+.yaml-databases-view .yt-cell-list {
 	color: var(--text-normal);
 }
 
@@ -887,7 +887,7 @@
 
 /* --- Generic buttons --------------------------------------------------- */
 
-.yaml-trees-view .yt-btn {
+.yaml-databases-view .yt-btn {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--size-4-1);
@@ -901,36 +901,36 @@
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-btn:hover {
+.yaml-databases-view .yt-btn:hover {
 	background: var(--interactive-hover);
 }
 
-.yaml-trees-view .yt-btn-subtle {
+.yaml-databases-view .yt-btn-subtle {
 	background: transparent;
 	color: var(--text-muted);
 }
 
-.yaml-trees-view .yt-btn-subtle:hover {
+.yaml-databases-view .yt-btn-subtle:hover {
 	background: var(--background-modifier-hover);
 	color: var(--text-normal);
 }
 
 /* --- Form -------------------------------------------------------------- */
 
-.yaml-trees-view .yt-form {
+.yaml-databases-view .yt-form {
 	max-width: 46rem;
 	padding: var(--size-4-4);
 	overflow: auto;
 }
 
-.yaml-trees-view .yt-field {
+.yaml-databases-view .yt-field {
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-2);
 	padding: var(--size-4-1) 0;
 }
 
-.yaml-trees-view .yt-field-label {
+.yaml-databases-view .yt-field-label {
 	flex: 0 0 12rem;
 	color: var(--text-muted);
 	overflow: hidden;
@@ -938,7 +938,7 @@
 	white-space: nowrap;
 }
 
-.yaml-trees-view .yt-field-input {
+.yaml-databases-view .yt-field-input {
 	flex: 1 1 auto;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
@@ -949,7 +949,7 @@
 
 /* Nested objects/arrays render as clearly separated cards so groups and
    components don't visually run together. */
-.yaml-trees-view .yt-group {
+.yaml-databases-view .yt-group {
 	margin: var(--size-4-2) 0;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);
@@ -958,11 +958,11 @@
 }
 
 /* Nested groups step down in tint so depth reads at a glance. */
-.yaml-trees-view .yt-group .yt-group {
+.yaml-databases-view .yt-group .yt-group {
 	background: var(--background-secondary);
 }
 
-.yaml-trees-view .yt-group-header {
+.yaml-databases-view .yt-group-header {
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-1);
@@ -973,38 +973,38 @@
 	user-select: none;
 }
 
-.yaml-trees-view .yt-group.is-collapsed .yt-group-header {
+.yaml-databases-view .yt-group.is-collapsed .yt-group-header {
 	border-bottom: 0;
 }
 
-.yaml-trees-view .yt-group-body {
+.yaml-databases-view .yt-group-body {
 	padding: var(--size-4-2);
 }
 
-.yaml-trees-view .yt-group-toggle {
+.yaml-databases-view .yt-group-toggle {
 	display: inline-flex;
 	color: var(--text-muted);
 }
 
-.yaml-trees-view .yt-group-toggle svg {
+.yaml-databases-view .yt-group-toggle svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
 
-.yaml-trees-view .yt-group-label {
+.yaml-databases-view .yt-group-label {
 	font-weight: var(--font-semibold);
 }
 
-.yaml-trees-view .yt-group-kind {
+.yaml-databases-view .yt-group-kind {
 	color: var(--text-faint);
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-group.is-collapsed .yt-group-body {
+.yaml-databases-view .yt-group.is-collapsed .yt-group-body {
 	display: none;
 }
 
-.yaml-trees-view .yt-icon-btn {
+.yaml-databases-view .yt-icon-btn {
 	display: inline-flex;
 	margin-left: auto;
 	color: var(--text-faint);
@@ -1013,19 +1013,19 @@
 	border-radius: var(--radius-s);
 }
 
-.yaml-trees-view .yt-icon-btn:hover {
+.yaml-databases-view .yt-icon-btn:hover {
 	color: var(--text-error);
 	background: var(--background-modifier-hover);
 }
 
-.yaml-trees-view .yt-icon-btn svg {
+.yaml-databases-view .yt-icon-btn svg {
 	width: var(--icon-s);
 	height: var(--icon-s);
 }
 
 /* --- Source ------------------------------------------------------------ */
 
-.yaml-trees-view .yt-source {
+.yaml-databases-view .yt-source {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -1034,7 +1034,7 @@
 
 /* Editor: a coloured highlight layer with a transparent textarea on top. Both
    children must share identical text metrics to stay pixel-aligned. */
-.yaml-trees-view .yt-source-editor {
+.yaml-databases-view .yt-source-editor {
 	position: relative;
 	flex: 1 1 auto;
 	min-height: 0;
@@ -1044,8 +1044,8 @@
 	overflow: hidden;
 }
 
-.yaml-trees-view .yt-source-highlight,
-.yaml-trees-view .yt-source-input {
+.yaml-databases-view .yt-source-highlight,
+.yaml-databases-view .yt-source-input {
 	position: absolute;
 	inset: 0;
 	margin: 0;
@@ -1062,19 +1062,19 @@
 	border: 0;
 }
 
-.yaml-trees-view .yt-source-highlight {
+.yaml-databases-view .yt-source-highlight {
 	overflow: hidden;
 	pointer-events: none;
 	color: var(--text-normal);
 	background: transparent;
 }
 
-.yaml-trees-view .yt-source-highlight code {
+.yaml-databases-view .yt-source-highlight code {
 	font: inherit;
 	white-space: inherit;
 }
 
-.yaml-trees-view .yt-source-input {
+.yaml-databases-view .yt-source-input {
 	resize: none;
 	overflow: auto;
 	color: transparent;
@@ -1083,27 +1083,27 @@
 	-webkit-text-fill-color: transparent;
 }
 
-.yaml-trees-view .yt-source-input::selection {
+.yaml-databases-view .yt-source-input::selection {
 	background: var(--text-selection);
 	-webkit-text-fill-color: transparent;
 }
 
-.yaml-trees-view .yt-source.has-error .yt-source-editor {
+.yaml-databases-view .yt-source.has-error .yt-source-editor {
 	border-color: var(--text-error);
 }
 
 /* YAML token colours (theme-native). */
-.yaml-trees-view .yt-yl-key { color: var(--color-blue, #4c8dff); }
-.yaml-trees-view .yt-yl-string { color: var(--text-normal); }
-.yaml-trees-view .yt-yl-number { color: var(--color-purple, #a06bff); }
-.yaml-trees-view .yt-yl-bool { color: var(--color-orange, #e08a2b); }
-.yaml-trees-view .yt-yl-null { color: var(--color-red, #d64b4b); }
-.yaml-trees-view .yt-yl-comment { color: var(--text-faint); font-style: italic; }
-.yaml-trees-view .yt-yl-dash,
-.yaml-trees-view .yt-yl-punc { color: var(--text-muted); }
-.yaml-trees-view .yt-yl-marker { color: var(--color-cyan, #38b2ac); font-weight: 600; }
+.yaml-databases-view .yt-yl-key { color: var(--color-blue, #4c8dff); }
+.yaml-databases-view .yt-yl-string { color: var(--text-normal); }
+.yaml-databases-view .yt-yl-number { color: var(--color-purple, #a06bff); }
+.yaml-databases-view .yt-yl-bool { color: var(--color-orange, #e08a2b); }
+.yaml-databases-view .yt-yl-null { color: var(--color-red, #d64b4b); }
+.yaml-databases-view .yt-yl-comment { color: var(--text-faint); font-style: italic; }
+.yaml-databases-view .yt-yl-dash,
+.yaml-databases-view .yt-yl-punc { color: var(--text-muted); }
+.yaml-databases-view .yt-yl-marker { color: var(--color-cyan, #38b2ac); font-weight: 600; }
 
-.yaml-trees-view .yt-source-error {
+.yaml-databases-view .yt-source-error {
 	margin-bottom: var(--size-4-2);
 	padding: var(--size-4-2);
 	border-radius: var(--radius-s);
@@ -1115,23 +1115,23 @@
 
 /* --- Empty & error states --------------------------------------------- */
 
-.yaml-trees-view .yt-empty {
+.yaml-databases-view .yt-empty {
 	padding: var(--size-4-8) var(--size-4-4);
 	text-align: center;
 	color: var(--text-muted);
 }
 
-.yaml-trees-view .yt-empty-title {
+.yaml-databases-view .yt-empty-title {
 	font-weight: var(--font-semibold);
 	color: var(--text-normal);
 	margin-bottom: var(--size-4-1);
 }
 
-.yaml-trees-view .yt-empty-subtitle {
+.yaml-databases-view .yt-empty-subtitle {
 	font-size: var(--font-ui-smaller);
 }
 
-.yaml-trees-view .yt-parse-error {
+.yaml-databases-view .yt-parse-error {
 	margin: var(--size-4-4);
 	padding: var(--size-4-3);
 	border: 1px solid var(--text-error);
@@ -1139,13 +1139,13 @@
 	background: var(--background-modifier-error);
 }
 
-.yaml-trees-view .yt-parse-error-title {
+.yaml-databases-view .yt-parse-error-title {
 	font-weight: var(--font-semibold);
 	color: var(--text-error);
 	margin-bottom: var(--size-4-2);
 }
 
-.yaml-trees-view .yt-parse-error-body {
+.yaml-databases-view .yt-parse-error-body {
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-smaller);
 	color: var(--text-normal);
@@ -1153,7 +1153,7 @@
 	white-space: pre-wrap;
 }
 
-.yaml-trees-view .yt-parse-error-hint {
+.yaml-databases-view .yt-parse-error-hint {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 }

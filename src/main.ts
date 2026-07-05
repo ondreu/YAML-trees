@@ -1,14 +1,20 @@
 import { Notice, Plugin, TFile, TFolder, normalizePath } from "obsidian";
-import { VIEW_TYPE_YAML, YAML_MD_SUFFIX, isYamlDbFile, ICONS } from "./constants";
+import {
+	VIEW_TYPE_YAML,
+	YAML_EXTENSIONS,
+	YAML_MD_SUFFIX,
+	isYamlDbFile,
+	ICONS,
+} from "./constants";
 import { YamlView } from "./view/YamlView";
 import {
 	DEFAULT_SETTINGS,
-	YamlTreesSettings,
-	YamlTreesSettingTab,
+	YamlDatabasesSettings,
+	YamlDatabasesSettingTab,
 } from "./settings";
 
-export default class YamlTreesPlugin extends Plugin {
-	settings!: YamlTreesSettings;
+export default class YamlDatabasesPlugin extends Plugin {
+	settings!: YamlDatabasesSettings;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -17,25 +23,46 @@ export default class YamlTreesPlugin extends Plugin {
 		// active (useful when checking whether a beta update actually landed).
 		console.log(`YAML Databases ${this.manifest.version} loaded`);
 
-		// Custom view for editing YAML stored inside Markdown files
-		// (`example.yaml.md`). We cannot call registerExtensions for `.md` (it
-		// would clash with Obsidian's built-in Markdown view), so the view is
-		// opened explicitly by intercepting file-open events below and via the
-		// command palette.
 		this.registerView(VIEW_TYPE_YAML, (leaf) => new YamlView(leaf, this));
 
-		// Intercept `.yaml.md` files: when Obsidian opens one in its default
-		// Markdown view, redirect it into the YAML Databases view. A guard on
-		// the current view type prevents a redirect loop.
+		// Own `.yaml` / `.yml` directly so clicking them opens our view. If another
+		// plugin already registered these extensions we silently fall back to the
+		// command below; the file-open hijack is not needed for these.
+		try {
+			this.registerExtensions(YAML_EXTENSIONS, VIEW_TYPE_YAML);
+		} catch (e) {
+			console.warn(
+				"YAML Databases: could not register .yaml/.yml extensions",
+				e
+			);
+		}
+
+		// `.yaml.md` files are Markdown notes to Obsidian, so we cannot own the
+		// extension. Instead, whenever a file is opened and it is a YAML database,
+		// swap the Markdown view for ours. We only hijack the built-in Markdown
+		// view (never other plugins' views) and guard against loops.
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file: TFile | null) => {
 				if (!file || !isYamlDbFile(file.path)) return;
-				const leaf = this.app.workspace.getLeaf(false);
-				const activeType = leaf?.view?.getViewType?.();
-				if (activeType === VIEW_TYPE_YAML) return;
-				void this.openInYamlView(file);
+				// Defer one tick so Obsidian has settled the Markdown view into its
+				// leaf before we replace it; otherwise getLeaf(false) can still
+				// point at the previous leaf.
+				const path = file.path;
+				setTimeout(() => this.hijackYamlMdLeaf(path), 0);
 			})
 		);
+
+		// On startup, convert any Markdown leaves already showing a `.yaml.md`
+		// file (e.g. Obsidian restored the previous workspace).
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			const f = (leaf.view as { file?: TFile } | null)?.file;
+			if (f && isYamlDbFile(f.path)) {
+				void leaf.setViewState({
+					type: VIEW_TYPE_YAML,
+					state: { file: f.path },
+				});
+			}
+		}
 
 		// "New YAML database" in the folder context menu.
 		this.registerEvent(
@@ -63,7 +90,7 @@ export default class YamlTreesPlugin extends Plugin {
 		// or the default Markdown view grabbed it. Essential on mobile where
 		// clicking the file may route elsewhere.
 		this.addCommand({
-			id: "open-in-yaml-trees",
+			id: "open-in-yaml-databases",
 			name: "Open current file in YAML Databases",
 			checkCallback: (checking: boolean) => {
 				const file = this.app.workspace.getActiveFile();
@@ -79,7 +106,7 @@ export default class YamlTreesPlugin extends Plugin {
 			this.createDatabase(this.currentFolder());
 		});
 
-		this.addSettingTab(new YamlTreesSettingTab(this.app, this));
+		this.addSettingTab(new YamlDatabasesSettingTab(this.app, this));
 	}
 
 	async loadSettings(): Promise<void> {
@@ -88,6 +115,23 @@ export default class YamlTreesPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+	}
+
+	/**
+	 * Replace the Markdown view showing `path` with the YAML Databases view.
+	 * Only acts on the built-in Markdown view (so it never steals a file from
+	 * another plugin) and skips leaves already in our view (loop guard).
+	 */
+	private hijackYamlMdLeaf(path: string): void {
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			const f = (leaf.view as { file?: TFile } | null)?.file;
+			if (f && f.path === path) {
+				void leaf.setViewState({
+					type: VIEW_TYPE_YAML,
+					state: { file: path },
+				});
+			}
+		}
 	}
 
 	/** Create a new YAML database in `folder` and open it in the main area. */

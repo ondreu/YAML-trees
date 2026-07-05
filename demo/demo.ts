@@ -162,7 +162,7 @@ function mountView(
 ): void {
 	const card = mount.createDiv();
 	card.createEl("h2", { text: title });
-	const view = card.createDiv({ cls: "yaml-trees-view" });
+	const view = card.createDiv({ cls: "yaml-databases-view" });
 	view.style.height = mode === "table" ? "320px" : "360px";
 	view.style.border = "1px solid var(--background-modifier-border)";
 	view.style.borderRadius = "8px";

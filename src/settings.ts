@@ -1,8 +1,8 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type YamlTreesPlugin from "./main";
+import type YamlDatabasesPlugin from "./main";
 import type { ViewMode } from "./constants";
 
-export interface YamlTreesSettings {
+export interface YamlDatabasesSettings {
 	/** Which editing mode a freshly opened file starts in. */
 	defaultView: ViewMode;
 	/** Base name used for newly created databases (before the number suffix). */
@@ -13,7 +13,7 @@ export interface YamlTreesSettings {
 	lintRules: string;
 }
 
-export const DEFAULT_SETTINGS: YamlTreesSettings = {
+export const DEFAULT_SETTINGS: YamlDatabasesSettings = {
 	defaultView: "table",
 	newFileBaseName: "Untitled",
 	newFileTemplate: "- name: Example item\n  quantity: 1\n",
@@ -34,10 +34,10 @@ const LINT_RULES_EXAMPLE = [
 	"#     enum: [open, done]",
 ].join("\n");
 
-export class YamlTreesSettingTab extends PluginSettingTab {
-	private readonly plugin: YamlTreesPlugin;
+export class YamlDatabasesSettingTab extends PluginSettingTab {
+	private readonly plugin: YamlDatabasesPlugin;
 
-	constructor(app: App, plugin: YamlTreesPlugin) {
+	constructor(app: App, plugin: YamlDatabasesPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

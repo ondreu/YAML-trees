@@ -12,15 +12,14 @@ single edit produces a single-line change. It works just as well for any YAML.
 > (e.g. `bom.yaml.md`). Obsidian treats them as notes, so the leading `---`
 > frontmatter block is indexed as **properties** (Bases / metadata compatible)
 > and diffs stay line-by-line; the body is raw YAML rendered by this plugin.
->
-> The plugin **id** is still `yaml-trees` so existing installs keep working; the
-> display name is **YAML Databases**.
+> Classic `.yaml` / `.yml` files are also supported (owned directly).
 
 ## Features
 
 - **Open `.yaml.md` files in the main area** by clicking them in the file
   explorer — the plugin intercepts them and opens its own view instead of the
-  default Markdown view. If another plugin grabbed the file, use the command
+  default Markdown view. Classic `.yaml` / `.yml` files open directly too. If
+  another plugin grabbed the file, use the command
   *Open current file in YAML Databases*.
 - **Three switchable views** (toggle in the toolbar):
   - **Table** — a spreadsheet for a list of records (rows x columns). Row
@@ -118,8 +117,9 @@ npm test         # run model round-trip / shape / coercion tests
 ```
 
 To try it in a vault, copy `main.js`, `manifest.json` and `styles.css` into
-`<vault>/.obsidian/plugins/yaml-trees/` and enable the plugin in
-**Settings → Community plugins**. Then create or open any `*.yaml.md` file.
+`<vault>/.obsidian/plugins/yaml-databases/` and enable the plugin in
+**Settings → Community plugins**. Then create or open any `*.yaml.md` (or
+`*.yaml`) file.
 
 ## Project layout
 

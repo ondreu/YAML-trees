@@ -5,7 +5,7 @@ import {
 	normalizePath,
 	setIcon,
 } from "obsidian";
-import type YamlTreesPlugin from "../main";
+import type YamlDatabasesPlugin from "../main";
 import { VIEW_TYPE_YAML, ICONS, type ViewMode } from "../constants";
 import {
 	parseYamlWithMeta,
@@ -43,7 +43,7 @@ function asRecords(value: unknown): Record<string, unknown>[] | null {
 }
 
 export class YamlView extends TextFileView implements EditorHost {
-	private readonly plugin: YamlTreesPlugin;
+	private readonly plugin: YamlDatabasesPlugin;
 
 	private model: unknown = undefined;
 	/** Obsidian-style frontmatter (leading `---` map), or null when absent. */
@@ -66,7 +66,7 @@ export class YamlView extends TextFileView implements EditorHost {
 	private lastSnapshot: unknown = undefined;
 	private suppressHistory = false;
 
-	constructor(leaf: WorkspaceLeaf, plugin: YamlTreesPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: YamlDatabasesPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 		this.mode = plugin.settings.defaultView;
@@ -210,7 +210,7 @@ export class YamlView extends TextFileView implements EditorHost {
 
 	private buildLayout(): void {
 		this.contentEl.empty();
-		const root = this.contentEl.createDiv({ cls: "yaml-trees-view" });
+		const root = this.contentEl.createDiv({ cls: "yaml-databases-view" });
 
 		if (this.parseError !== null) {
 			const banner = root.createDiv({ cls: "yt-parse-error" });
