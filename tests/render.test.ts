@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { installDom } from "./obsidian-dom-shim";
 import { TableRenderer } from "../src/view/TableRenderer";
+import { SourceRenderer } from "../src/view/SourceRenderer";
+import { FormRenderer } from "../src/view/FormRenderer";
 import type { EditorHost } from "../src/view/Renderer";
 
 const document = installDom();
@@ -144,4 +146,56 @@ test("adding a column extends every row", () => {
 	).map((i) => i.value);
 	assert.deepEqual(heads, ["name", "field 1"]);
 	assert.deepEqual(host.current(), [{ name: "Bolt", "field 1": null }]);
+});
+
+test("a seeded sub-table cell renders drill + expand affordances", () => {
+	const container = document.createElement("div");
+	let inst: TableRenderer;
+	const host = makeHost(
+		[{ name: "Assembly", bom: [{ part: "Bolt", qty: 4 }] }],
+		() => inst
+	);
+	inst = new TableRenderer(container, host);
+	inst.render();
+
+	// The sub-table cell shows a drill button ("N rows") and an expander.
+	assert.ok(container.querySelector(".yt-drill"), "expected a drill button");
+	assert.ok(container.querySelector(".yt-subexpand"), "expected an expander");
+});
+
+test("every row gutter has a grabber grip handle", () => {
+	const container = document.createElement("div");
+	let inst: TableRenderer;
+	const host = makeHost([{ name: "Bolt" }, { name: "Nut" }], () => inst);
+	inst = new TableRenderer(container, host);
+	inst.render();
+
+	const grips = container.querySelectorAll(".yt-row-grip");
+	assert.equal(grips.length, 2);
+});
+
+test("Source view highlights YAML behind an aligned transparent textarea", () => {
+	const container = document.createElement("div");
+	const host = makeHost([{ part: "Bolt", qty: 4 }]);
+	new SourceRenderer(container, host).render();
+
+	const textarea = container.querySelector<HTMLTextAreaElement>(
+		".yt-source-input"
+	)!;
+	const code = container.querySelector<HTMLElement>(".yt-source-highlight code")!;
+	assert.ok(textarea, "expected a textarea");
+	assert.ok(code.innerHTML.includes("yt-yl-key"), "expected highlighted tokens");
+	// The highlight layer's visible text must match the textarea exactly.
+	assert.equal(code.textContent, textarea.value);
+});
+
+test("Form view renders nested groups as separated cards", () => {
+	const container = document.createElement("div");
+	const host = makeHost({ name: "Assembly", specs: { weight: 5, color: "red" } });
+	new FormRenderer(container, host).render();
+
+	const group = container.querySelector(".yt-group");
+	assert.ok(group, "expected a nested group card");
+	assert.ok(group!.querySelector(".yt-group-header"), "expected a group header");
+	assert.ok(group!.querySelector(".yt-group-body"), "expected a group body");
 });
