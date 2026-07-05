@@ -34,6 +34,7 @@ export class YamlView extends TextFileView implements EditorHost {
 	private model: unknown = undefined;
 	private mode: ViewMode;
 	private editorEl!: HTMLElement;
+	private ribbonEl!: HTMLElement;
 	private lintEl!: HTMLElement;
 	/** Renderer instances cached per mode so their state (drill path, column
 	 * widths) survives data changes and mode switches. */
@@ -151,63 +152,122 @@ export class YamlView extends TextFileView implements EditorHost {
 			return;
 		}
 
-		this.buildToolbar(root);
+		this.ribbonEl = root.createDiv({ cls: "yt-ribbon" });
+		this.buildRibbon();
 		this.lintEl = root.createDiv({ cls: "yt-lint" });
 		this.lintEl.hide();
 		this.editorEl = root.createDiv({ cls: "yt-editor" });
 	}
 
-	private buildToolbar(root: HTMLElement): void {
-		const bar = root.createDiv({ cls: "yt-modebar" });
+	/** Build the Excel-style ribbon. Insert/Edit groups appear only in Table mode. */
+	private buildRibbon(): void {
+		this.ribbonEl.empty();
 
-		// Mode switch (segmented).
+		// View group: mode switch.
+		const view = this.ribbonGroup("View");
+		this.modeButtons = {};
 		const modes: { mode: ViewMode; icon: string; label: string }[] = [
 			{ mode: "table", icon: ICONS.table, label: "Table" },
 			{ mode: "form", icon: ICONS.form, label: "Form" },
 			{ mode: "source", icon: ICONS.source, label: "Source" },
 		];
-		const group = bar.createDiv({ cls: "yt-mode-group" });
-		this.modeButtons = {};
 		for (const { mode, icon, label } of modes) {
-			const btn = group.createEl("button", { cls: "yt-mode-btn" });
-			setIcon(btn.createSpan({ cls: "yt-btn-icon" }), icon);
-			btn.createSpan({ text: label });
-			btn.addEventListener("click", () => this.setMode(mode));
+			const btn = this.ribbonButton(view, icon, label, () => this.setMode(mode));
+			btn.toggleClass("is-active", this.mode === mode);
 			this.modeButtons[mode] = btn;
 		}
-		this.updateModeButtons();
 
-		// Spacer + action buttons.
-		bar.createDiv({ cls: "yt-modebar-spacer" });
-		this.toolbarButton(bar, "check-circle", "Lint", () => this.toggleLint());
-		this.toolbarButton(bar, "download", "CSV", () => this.exportCsv());
-		this.toolbarButton(bar, "download", "XLSX", () => this.exportXlsx());
-		this.toolbarButton(bar, "code", "HTML", () => this.exportHtmlFile());
+		if (this.mode === "table") {
+			this.ribbonDivider();
+			const insert = this.ribbonGroup("Insert");
+			this.ribbonButton(insert, "plus", "Row", () =>
+				this.tableCmd((t) => t.cmdAddRow())
+			);
+			this.ribbonButton(insert, "plus", "Column", () =>
+				this.tableCmd((t) => t.cmdAddColumn())
+			);
+
+			this.ribbonDivider();
+			const edit = this.ribbonGroup("Edit");
+			const colA = edit.createDiv({ cls: "yt-rb-mini-col" });
+			this.ribbonMini(colA, "arrow-up", "Move up", () =>
+				this.tableCmd((t) => t.cmdMoveRowUp())
+			);
+			this.ribbonMini(colA, "arrow-down", "Move down", () =>
+				this.tableCmd((t) => t.cmdMoveRowDown())
+			);
+			this.ribbonMini(colA, "copy", "Duplicate", () =>
+				this.tableCmd((t) => t.cmdDuplicateRow())
+			);
+			const colB = edit.createDiv({ cls: "yt-rb-mini-col" });
+			this.ribbonMini(colB, "trash-2", "Delete row", () =>
+				this.tableCmd((t) => t.cmdDeleteRow())
+			);
+			this.ribbonMini(colB, "trash", "Delete column", () =>
+				this.tableCmd((t) => t.cmdDeleteColumn())
+			);
+		}
+
+		this.ribbonDivider();
+		const validate = this.ribbonGroup("Validate");
+		this.ribbonButton(validate, "circle-check", "Lint", () => this.toggleLint());
+
+		this.ribbonDivider();
+		const exp = this.ribbonGroup("Export");
+		this.ribbonButton(exp, "file-text", "CSV", () => this.exportCsv());
+		this.ribbonButton(exp, "sheet", "Excel", () => this.exportXlsx());
+		this.ribbonButton(exp, "file-code", "HTML", () => this.exportHtmlFile());
 	}
 
-	private toolbarButton(
-		bar: HTMLElement,
+	private ribbonGroup(caption: string): HTMLElement {
+		const group = this.ribbonEl.createDiv({ cls: "yt-rgroup" });
+		const body = group.createDiv({ cls: "yt-rgroup-body" });
+		group.createDiv({ cls: "yt-rgroup-cap", text: caption });
+		return body;
+	}
+
+	private ribbonDivider(): void {
+		this.ribbonEl.createDiv({ cls: "yt-rdiv" });
+	}
+
+	private ribbonButton(
+		body: HTMLElement,
+		icon: string,
+		label: string,
+		onClick: () => void
+	): HTMLElement {
+		const btn = body.createEl("button", { cls: "yt-rb", attr: { "aria-label": label } });
+		setIcon(btn.createSpan({ cls: "yt-rb-icon" }), icon);
+		btn.createSpan({ cls: "yt-rb-label", text: label });
+		btn.addEventListener("click", onClick);
+		return btn;
+	}
+
+	private ribbonMini(
+		col: HTMLElement,
 		icon: string,
 		label: string,
 		onClick: () => void
 	): void {
-		const btn = bar.createEl("button", { cls: "yt-tool-btn", attr: { "aria-label": label } });
-		setIcon(btn.createSpan({ cls: "yt-btn-icon" }), icon);
+		const btn = col.createEl("button", { cls: "yt-rb-mini" });
+		setIcon(btn.createSpan({ cls: "yt-rb-mini-icon" }), icon);
 		btn.createSpan({ text: label });
 		btn.addEventListener("click", onClick);
+	}
+
+	/** Run a command against the live Table renderer, if we are in Table mode. */
+	private tableCmd(fn: (t: TableRenderer) => void): void {
+		const renderer = this.renderers["table"];
+		if (renderer instanceof TableRenderer) {
+			fn(renderer);
+		}
 	}
 
 	private setMode(mode: ViewMode): void {
 		if (this.mode === mode) return;
 		this.mode = mode;
-		this.updateModeButtons();
+		this.buildRibbon();
 		this.renderActive();
-	}
-
-	private updateModeButtons(): void {
-		for (const mode of Object.keys(this.modeButtons) as ViewMode[]) {
-			this.modeButtons[mode]?.toggleClass("is-active", this.mode === mode);
-		}
 	}
 
 	private renderActive(): void {

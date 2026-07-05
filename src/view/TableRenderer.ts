@@ -1,4 +1,4 @@
-import { Menu, setIcon } from "obsidian";
+import { Menu, Notice, setIcon } from "obsidian";
 import { Renderer } from "./Renderer";
 import { collectColumns, isPlainObject } from "../model/shape";
 import { coerceScalar, formatScalar } from "../model/coerce";
@@ -580,6 +580,71 @@ export class TableRenderer extends Renderer {
 	): void {
 		record[column] = convertCell(record[column], to);
 		this.host.replaceData(this.host.getData());
+	}
+
+	// --- Public commands (invoked by the ribbon) ------------------------
+
+	cmdAddRow(): void {
+		const records = this.resolveLevel();
+		if (records) this.addRow(records, collectColumns(records));
+	}
+
+	cmdAddColumn(): void {
+		const records = this.resolveLevel();
+		if (records) this.addColumn(records, collectColumns(records));
+	}
+
+	/** Resolve the current level plus the active cell, or notify and return null. */
+	private activeContext(): {
+		records: Record<string, unknown>[];
+		columns: string[];
+		r: number;
+		c: number;
+	} | null {
+		const records = this.resolveLevel();
+		if (!records) return null;
+		if (!this.active) {
+			new Notice("Select a cell first.");
+			return null;
+		}
+		return { records, columns: collectColumns(records), r: this.active.r, c: this.active.c };
+	}
+
+	cmdMoveRowUp(): void {
+		const a = this.activeContext();
+		if (!a || a.r <= 0) return;
+		this.active = { r: a.r - 1, c: a.c };
+		this.anchor = this.active;
+		this.moveRow(a.records, a.r, a.r - 1);
+	}
+
+	cmdMoveRowDown(): void {
+		const a = this.activeContext();
+		if (!a || a.r >= a.records.length - 1) return;
+		this.active = { r: a.r + 1, c: a.c };
+		this.anchor = this.active;
+		this.moveRow(a.records, a.r, a.r + 1);
+	}
+
+	cmdDuplicateRow(): void {
+		const a = this.activeContext();
+		if (!a) return;
+		a.records.splice(a.r + 1, 0, structuredClone(a.records[a.r]));
+		this.host.replaceData(this.host.getData());
+	}
+
+	cmdDeleteRow(): void {
+		const a = this.activeContext();
+		if (!a) return;
+		a.records.splice(a.r, 1);
+		this.clearSelection();
+		this.host.replaceData(this.host.getData());
+	}
+
+	cmdDeleteColumn(): void {
+		const a = this.activeContext();
+		if (!a) return;
+		this.deleteColumn(a.columns[a.c]);
 	}
 
 	// --- Drag and drop ---------------------------------------------------

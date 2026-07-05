@@ -13,78 +13,130 @@
 	font-size: var(--font-ui-small);
 }
 
-/* --- Mode switcher (segmented control) -------------------------------- */
+/*
+ * Mobile keyboard fix: let our view own the leaf content so ONLY the inner
+ * sheet scrolls. Without this, focusing a cell makes the OS keyboard scroll the
+ * outer .view-content and the whole UI slides off-screen.
+ */
+.workspace-leaf-content[data-type="yaml-trees-view"] .view-content {
+	padding: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
 
-.yaml-trees-view .yt-modebar {
+/* --- Ribbon (Excel-style command bar) --------------------------------- */
+
+.yaml-trees-view .yt-ribbon {
 	flex: 0 0 auto;
 	display: flex;
-	align-items: center;
-	gap: var(--size-4-2);
-	flex-wrap: wrap;
-	padding: var(--size-4-2) var(--size-4-3);
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.yaml-trees-view .yt-mode-group {
-	display: flex;
-}
-
-.yaml-trees-view .yt-modebar-spacer {
-	flex: 1 1 auto;
-}
-
-.yaml-trees-view .yt-tool-btn {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--size-4-1);
-	padding: var(--size-4-1) var(--size-4-2);
-	background: var(--interactive-normal);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-	cursor: pointer;
-	box-shadow: none;
-}
-
-.yaml-trees-view .yt-tool-btn:hover {
-	background: var(--interactive-hover);
-	color: var(--text-normal);
-}
-
-.yaml-trees-view .yt-mode-btn {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--size-4-1);
-	padding: var(--size-4-1) var(--size-4-3);
+	align-items: stretch;
+	gap: 0;
+	padding: var(--size-4-1) var(--size-4-2) 2px;
 	background: var(--background-secondary);
-	border: 1px solid var(--background-modifier-border);
-	border-right-width: 0;
-	border-radius: 0;
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-	cursor: pointer;
-	box-shadow: none;
+	border-bottom: 1px solid var(--background-modifier-border);
+	overflow-x: auto;
 }
 
-.yaml-trees-view .yt-mode-btn:first-child {
-	border-radius: var(--radius-s) 0 0 var(--radius-s);
+.yaml-trees-view .yt-rgroup {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 0 var(--size-4-2);
 }
 
-.yaml-trees-view .yt-mode-btn:last-child {
-	border-right-width: 1px;
-	border-radius: 0 var(--radius-s) var(--radius-s) 0;
+.yaml-trees-view .yt-rgroup-body {
+	display: flex;
+	align-items: flex-start;
+	gap: 2px;
+	flex: 1;
 }
 
-.yaml-trees-view .yt-mode-btn:hover {
+.yaml-trees-view .yt-rgroup-cap {
+	font-size: 10px;
+	color: var(--text-faint);
+	margin-top: 2px;
+	letter-spacing: 0.02em;
+}
+
+.yaml-trees-view .yt-rdiv {
+	width: 1px;
+	background: var(--background-modifier-border);
+	margin: var(--size-4-1) var(--size-4-1);
+	align-self: stretch;
+}
+
+/* Large icon-over-label button. */
+.yaml-trees-view .yt-rb {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	min-width: 52px;
+	padding: 4px var(--size-4-2);
+	border: none;
+	border-radius: var(--radius-s);
+	background: transparent;
 	color: var(--text-normal);
+	cursor: pointer;
+	font-size: 11px;
+	line-height: 1.1;
+	box-shadow: none;
+	white-space: nowrap;
+}
+
+.yaml-trees-view .yt-rb:hover {
 	background: var(--background-modifier-hover);
 }
 
-.yaml-trees-view .yt-mode-btn.is-active {
-	color: var(--text-on-accent);
-	background: var(--interactive-accent);
-	border-color: var(--interactive-accent);
+.yaml-trees-view .yt-rb.is-active {
+	background: var(--background-modifier-active-hover, rgba(120, 120, 250, 0.15));
+	color: var(--text-accent);
+}
+
+.yaml-trees-view .yt-rb-icon {
+	display: inline-flex;
+}
+
+.yaml-trees-view .yt-rb-icon svg {
+	width: 20px;
+	height: 20px;
+}
+
+/* Stacked mini commands. */
+.yaml-trees-view .yt-rb-mini-col {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.yaml-trees-view .yt-rb-mini {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px var(--size-4-2) 3px var(--size-4-1);
+	border: none;
+	border-radius: var(--radius-s);
+	background: transparent;
+	color: var(--text-normal);
+	cursor: pointer;
+	font-size: 12px;
+	white-space: nowrap;
+	box-shadow: none;
+}
+
+.yaml-trees-view .yt-rb-mini:hover {
+	background: var(--background-modifier-hover);
+}
+
+.yaml-trees-view .yt-rb-mini-icon {
+	display: inline-flex;
+	color: var(--text-muted);
+}
+
+.yaml-trees-view .yt-rb-mini-icon svg {
+	width: 15px;
+	height: 15px;
 }
 
 .yaml-trees-view .yt-btn-icon {
@@ -173,6 +225,9 @@
 .yaml-trees-view .yt-sheet-scroll {
 	flex: 1 1 auto;
 	overflow: auto;
+	/* Keep a focused cell clear of the sticky header when scrolled into view. */
+	scroll-padding-top: 2.2em;
+	-webkit-overflow-scrolling: touch;
 }
 
 .yaml-trees-view .yt-sheet {

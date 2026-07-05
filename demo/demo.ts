@@ -85,6 +85,58 @@ function makeHost(initial: unknown, factory: () => { render(): void }): EditorHo
 	};
 }
 
+// Mirror of YamlView.buildRibbon, for visually verifying the shipped styles.css.
+function buildRibbon(ribbon: HTMLElement, mode: "table" | "form"): void {
+	const group = (cap: string): HTMLElement => {
+		const g = ribbon.createDiv({ cls: "yt-rgroup" });
+		const body = g.createDiv({ cls: "yt-rgroup-body" });
+		g.createDiv({ cls: "yt-rgroup-cap", text: cap });
+		return body;
+	};
+	const div = () => ribbon.createDiv({ cls: "yt-rdiv" });
+	const rb = (body: HTMLElement, label: string, active = false): void => {
+		const b = body.createEl("button", {
+			cls: active ? "yt-rb is-active" : "yt-rb",
+		});
+		b.createSpan({ cls: "yt-rb-icon" });
+		b.createSpan({ cls: "yt-rb-label", text: label });
+	};
+	const mini = (col: HTMLElement, label: string): void => {
+		const b = col.createEl("button", { cls: "yt-rb-mini" });
+		b.createSpan({ cls: "yt-rb-mini-icon" });
+		b.createSpan({ text: label });
+	};
+
+	const view = group("View");
+	rb(view, "Table", mode === "table");
+	rb(view, "Form", mode === "form");
+	rb(view, "Source");
+
+	if (mode === "table") {
+		div();
+		const insert = group("Insert");
+		rb(insert, "Row");
+		rb(insert, "Column");
+		div();
+		const edit = group("Edit");
+		const a = edit.createDiv({ cls: "yt-rb-mini-col" });
+		mini(a, "Move up");
+		mini(a, "Move down");
+		mini(a, "Duplicate");
+		const b = edit.createDiv({ cls: "yt-rb-mini-col" });
+		mini(b, "Delete row");
+		mini(b, "Delete column");
+	}
+
+	div();
+	rb(group("Validate"), "Lint");
+	div();
+	const exp = group("Export");
+	rb(exp, "CSV");
+	rb(exp, "Excel");
+	rb(exp, "HTML");
+}
+
 function mountView(
 	mount: HTMLElement,
 	title: string,
@@ -94,20 +146,11 @@ function mountView(
 	const card = mount.createDiv();
 	card.createEl("h2", { text: title });
 	const view = card.createDiv({ cls: "yaml-trees-view" });
-	view.style.height = mode === "table" ? "260px" : "320px";
+	view.style.height = mode === "table" ? "320px" : "360px";
 	view.style.border = "1px solid var(--background-modifier-border)";
 	view.style.borderRadius = "8px";
 
-	const bar = view.createDiv({ cls: "yt-modebar" });
-	(["Table", "Form", "Source"] as const).forEach((label) => {
-		const active = label.toLowerCase() === mode;
-		const btn = bar.createEl("button", {
-			cls: active ? "yt-mode-btn is-active" : "yt-mode-btn",
-		});
-		btn.createSpan({ cls: "yt-btn-icon" });
-		btn.createSpan({ text: label });
-	});
-
+	buildRibbon(view.createDiv({ cls: "yt-ribbon" }), mode);
 	const editor = view.createDiv({ cls: "yt-editor" });
 	let inst: { render(): void };
 	const host = makeHost(data, () => inst);
