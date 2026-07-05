@@ -6,72 +6,118 @@ as interactive databases** — through a clean, native-feeling UI as a
 
 It was built for maintaining bills of materials (kusovníky) whose changes are
 tracked with `git diff`, so its output is **deterministic and diff-friendly**: a
-single edit produces a single-line change. It works just as well for any YAML.
+single edit produces a single-line change. It works just as well for any YAML —
+inventories, contact lists, changelogs, recipes, configuration, knowledge bases.
 
-> Databases are stored as **Markdown files** with a `.yaml.md` suffix
-> (e.g. `bom.yaml.md`). Obsidian treats them as notes, so the leading `---`
-> frontmatter block is indexed as **properties** (Bases / metadata compatible)
-> and diffs stay line-by-line; the body is raw YAML rendered by this plugin.
-> Classic `.yaml` / `.yml` files are also supported (owned directly).
+## Why YAML inside Markdown (`.yaml.md`)?
+
+Databases are stored as **Markdown files** with a `.yaml.md` suffix
+(e.g. `bom.yaml.md`). The file is plain text with two parts:
+
+```
+---
+title: Drone BOM
+owner: ondreu
+status: draft
+---
+- part: Main assembly
+  qty: 1
+  components:
+    - part: M3x8 bolt
+      qty: 12
+- part: 007 washer
+  qty: 24
+```
+
+This gives you the best of both worlds:
+
+- **Obsidian treats it as a note.** The leading `---` block is indexed as
+  **frontmatter / properties**, so your databases show up in **Bases** and
+  metadata queries just like any other note. Tags, links, and Dataview-style
+  filters work on database files too.
+- **It is a real Markdown file.** It opens in the file explorer, syncs over
+  Obsidian Sync, works on mobile, and can be linked to from other notes.
+  The plugin replaces only the *view*; the file on disk stays plain text.
+- **Human-readable.** Anyone can open it in any editor — VS Code, vim, GitHub,
+  Notepad — and read it line by line. No binary format, no database engine.
+- **Line-based reading.** Because every value sits on its own line in stable
+  order, `git diff` shows exactly what changed: one cell → one line. Reviews
+  and merges are trivial.
+- **AI-friendly.** The body is clean YAML, a format every LLM reads and writes
+  natively. Paste a database into a chat, ask for edits, and paste it back —
+  or let an agent commit changes that diff cleanly.
+- **Portable.** No lock-in. The file is YAML; the plugin is just a viewer and
+  editor. Stop using it tomorrow and your data is still 100% usable.
+- **Classic `.yaml` / `.yml` files are also supported** — owned directly via
+  extension registration, opened the same way (without the Markdown benefits).
 
 ## Features
 
-- **Open `.yaml.md` files in the main area** by clicking them in the file
-  explorer — the plugin intercepts them and opens its own view instead of the
-  default Markdown view. Classic `.yaml` / `.yml` files open directly too. If
-  another plugin grabbed the file, use the command
-  *Open current file in YAML Databases*.
+- **Open `.yaml.md` / `.yaml` / `.yml` files in the main area** by clicking
+  them in the file explorer. For `.yaml.md` the plugin intercepts the default
+  Markdown view and swaps in its own (only the built-in Markdown view is
+  touched, never other plugins' views). If another plugin grabbed the file,
+  use the command *Open current file in YAML Databases*.
 - **Three switchable views** (toggle in the toolbar):
-  - **Table** — a spreadsheet for a list of records (rows x columns). Row
+  - **Table** — a spreadsheet for a list of records (rows × columns). Row
     numbers, sticky header, inline cell and column-name editing, keyboard
-    navigation (Tab / Enter / arrows), **resizable columns**, **drag-to-reorder**
-    rows and columns, and **Excel-style range selection with copy/paste** (TSV).
-    Right-click a row number, column header, or cell for insert / move /
-    duplicate / delete / clear and per-cell **type** changes.
-  - **Form** — a collapsible, labelled tree for maps and nested data, with each
-    nested group shown as a clearly separated card.
-  - **Source** — the raw YAML with **live syntax highlighting** and validation as
-    an escape hatch.
+    navigation (Tab / Enter / arrows), **resizable columns**,
+    **drag-to-reorder** rows and columns, and **Excel-style range selection
+    with copy/paste** (TSV). Right-click a row number, column header, or cell
+    for insert / move / duplicate / delete / clear and per-cell **type**
+    changes.
+  - **Form** — a collapsible, labelled tree for maps and nested data, with
+    each nested group shown as a clearly separated card.
+  - **Source** — the raw YAML with **live syntax highlighting** and validation
+    as an escape hatch.
 - **Sub-databases (subassemblies)** — a cell can hold a nested list of records;
   **expand** it inline to peek, or **drill in** with a breadcrumb to navigate
-  back out. Insert one from the ribbon (Insert -> Sub-table).
-- **Find & replace** across the whole database and its sub-tables (Data -> Find),
+  back out. Insert one from the ribbon (Insert → Sub-table). Perfect for BOM
+  trees where each assembly contains sub-assemblies.
+- **Find & replace** across the whole database and its sub-tables (Data → Find),
   scoped to a column or all, case-sensitive and whole-cell options.
 - **Components** (Reuse) — a de-duplicated list of every record across the file
   and its sub-assemblies; insert a copy to reuse a block.
-- **Flatten BOM** (Data -> Flatten) — roll quantities up through the sub-assembly
-  tree into one parts list and export it as CSV/XLSX.
-- **Auto-ID** (Data -> Auto-ID) — assign nested-friendly hierarchical IDs to
-  every part and sub-assembly part (`1`, `1.1`, `1.2.1`...), the id placed first.
-- **Metadata** (Data -> Metadata) — attach Obsidian-style frontmatter to a
-  database, stored as a leading `---` YAML document ahead of the body (the same
-  style as markdown notes). A plain file with no frontmatter is left untouched.
+- **Flatten BOM** (Data → Flatten) — roll quantities up through the sub-assembly
+  tree into one flat parts list and export it as CSV/XLSX. Sub-assemblies are
+  exploded into indented child rows (with a `Level` column) so a spreadsheet
+  shows every part on its own line instead of a JSON blob in one cell.
+- **Auto-ID** (Data → Auto-ID) — assign nested-friendly hierarchical IDs to
+  every part and sub-assembly part (`1`, `1.1`, `1.2.1`…), the id placed first.
+- **Metadata** (Data → Metadata) — attach Obsidian-style frontmatter to a
+  database, stored as a leading `---` YAML document ahead of the body. A plain
+  file with no frontmatter is left untouched.
 - **Totals footer** with column sums, a **frozen first column**, and
   **touch-friendly drag** of row numbers / column handles to reorder.
-- **Sort & filter** (view-only) — click a column's chevron to sort; a filter box
-  shows only matching rows. Neither changes the file.
+- **Sort & filter** (view-only) — click a column's chevron to sort; a filter
+  box shows only matching rows. Neither changes the file.
 - **Schema from lint rules** — a column with an `enum` rule renders as a
   **dropdown**; cells that violate a rule are outlined.
 - **Undo / redo** (ribbon History, or Ctrl/Cmd+Z / Shift+Z) and **fill-down**
   (Ctrl/Cmd+D) over a selected range.
-- **Import** a CSV or XLSX file into the table (Data -> Import).
-- **Cell types** — per cell choose text, number, checkbox, multiline text, list,
-  sub-table, or object (right-click a cell).
+- **Cell types** — per cell choose text, number, checkbox, multiline text,
+  list, sub-table, or object (right-click a cell).
 - **Linter** — built-in checks plus your own **declarative YAML rules**
-  (`required`, `unique`, `type`, `min`/`max`, `enum`, `pattern`, `nonEmpty`) set
-  in settings; results show in a panel from the **Lint** button.
-- **Export** — **CSV**, **XLSX** (no dependency), **YAML** (a standalone
-  `.yaml` dump of the database with its frontmatter), and a
-  **self-contained HTML** file that browses the database (with drill-down,
-  search, and its own CSV/XLSX/YAML download) offline, from the toolbar. Sub-assemblies are exploded into
-  indented child rows (with a `Level` column) so a spreadsheet shows every part
-  on its own line instead of a JSON blob in one cell.
-- **Create a new database** from the folder context menu (*New YAML database*),
-  the command palette, or the ribbon icon.
-- **Git-friendly output** — block style, one value per line, stable key order,
-  no line wrapping. Editing one cell changes one line in the diff.
-- **Theme-native UI** — styled entirely with Obsidian's own CSS variables, so it
-  matches light/dark and any community theme.
+  (`required`, `unique`, `type`, `min`/`max`, `enum`, `pattern`, `nonEmpty`)
+  set in settings; results show in a panel from the **Lint** button.
+- **Theme-native UI** — styled entirely with Obsidian's own CSS variables, so
+  it matches light/dark and any community theme.
+
+### Import
+
+- **CSV** and **XLSX** files (Data → Import). Imported rows are appended to the
+  current table, or replace an empty database.
+
+### Export
+
+- **CSV** — standard comma-separated, CRLF, quoted as needed.
+- **XLSX** — real Excel file with no runtime dependency (a tiny inline zip +
+  worksheet writer, ~2 KB).
+- **YAML** — a standalone `.yaml` dump of the database with its frontmatter,
+  for sharing with tools that expect plain YAML.
+- **HTML** — a self-contained `.html` file that browses the database offline
+  (drill-down, search, and its own CSV/XLSX/YAML download buttons). Drop it on
+  a USB stick, email it, host it statically — no Obsidian needed.
 
 ## Usage
 
@@ -85,19 +131,104 @@ file explorer and their frontmatter is available to **Bases** and metadata
 queries. The plugin renders the YAML body; the default Markdown view is replaced
 automatically when such a file is opened.
 
-### Type inference
+## Examples
+
+### Bill of materials (BOM) with sub-assemblies
+
+`drone.yaml.md`:
+
+```yaml
+---
+title: Drone BOM
+owner: ondreu
+status: draft
+---
+- part: Airframe
+  qty: 1
+  supplier: In-house
+  inStock: true
+  components:
+    - part: M3x8 bolt
+      qty: 12
+    - part: M3 nut
+      qty: 12
+- part: 007 washer
+  qty: 24
+  supplier: Bolts Ltd
+  inStock: false
+- part: PCB v2
+  qty: 1
+  supplier: JLC
+  inStock: true
+```
+
+Open it in the Table view, drill into the `components` sub-table of the Airframe
+row, run **Flatten** to roll up quantities across the whole tree, then export
+the flat parts list to XLSX for purchasing.
+
+### Inventory with lint rules
+
+Settings → Lint rules:
+
+```yaml
+rules:
+  - column: sku
+    required: true
+    unique: true
+    pattern: "^[A-Z]{3}-\\d{4}$"
+  - column: quantity
+    type: integer
+    min: 0
+  - column: status
+    enum: [in-stock, ordered, discontinued]
+```
+
+Now the `status` column renders as a dropdown, out-of-stock violations are
+outlined in red, and the Lint panel lists every problem with row + column.
+
+### Recipe collection
+
+```yaml
+---
+title: Sourdough
+tags: [bread, vegan]
+---
+- ingredient: Bread flour
+  amount: 500
+  unit: g
+- ingredient: Water
+  amount: 350
+  unit: g
+- ingredient: Salt
+  amount: 10
+  unit: g
+```
+
+### Simple contact list
+
+```yaml
+- name: Ada Lovelace
+  email: ada@example.com
+  role: engineer
+- name: Alan Turing
+  email: alan@example.com
+  role: mathematician
+```
+
+## Type inference
 
 Cell/field input is coerced conservatively: `true`/`false` → boolean, empty or
 `null` → null, canonical numbers → number, everything else stays a string.
 Leading-zero values such as `007` are kept as strings so part numbers are not
 mangled.
 
-### Settings
+## Settings
 
 - **Default view** — Table / Form / Source. Table automatically falls back to
   Form when a file is not a list of records.
 - **New file base name** and **New file template** — used when creating a
   database.
+- **Lint rules** — declarative validation in YAML (see example above).
 
 ## Limitations
 
@@ -138,6 +269,12 @@ src/
     TableRenderer.ts   spreadsheet editor
     FormRenderer.ts    recursive form / tree editor
     SourceRenderer.ts  raw YAML editor with validation
+  export/
+    csv.ts  xlsx.ts  html.ts  zip.ts
+  import/
+    csvRead.ts  xlsxRead.ts
+  lint/
+    lint.ts
 ```
 
 ## License
