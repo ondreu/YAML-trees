@@ -454,3 +454,9 @@
 	width: 100%;
 	font-family: var(--font-monospace);
 }
+
+.yt-settings-version {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	margin: 0 0 var(--size-4-3) 0;
+}

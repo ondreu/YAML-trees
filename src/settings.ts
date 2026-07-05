@@ -29,6 +29,12 @@ export class YamlTreesSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		// Version line so it is easy to confirm which build is installed.
+		containerEl.createEl("p", {
+			cls: "yt-settings-version",
+			text: `YAML Trees v${this.plugin.manifest.version}`,
+		});
+
 		new Setting(containerEl)
 			.setName("Default view")
 			.setDesc(

@@ -46,16 +46,31 @@ export class FormRenderer extends Renderer {
 		for (const key of Object.keys(obj)) {
 			this.renderEntry(parent, key, obj[key], obj, onMutate);
 		}
-		const add = parent.createEl("button", { cls: "yt-btn yt-btn-subtle" });
+		// Inline "add field" row: a name input plus a button. Avoids window.prompt,
+		// which is unreliable on mobile.
+		const adder = parent.createDiv({ cls: "yt-field yt-field-adder" });
+		const nameInput = adder.createEl("input", {
+			type: "text",
+			cls: "yt-field-input",
+			attr: { placeholder: "New field name", spellcheck: "false" },
+		});
+		const add = adder.createEl("button", { cls: "yt-btn yt-btn-subtle" });
 		setIcon(add.createSpan({ cls: "yt-btn-icon" }), "plus");
 		add.createSpan({ text: "Field" });
-		add.addEventListener("click", () => {
-			const name = window.prompt("New field name");
+		const commit = () => {
+			const name = nameInput.value.trim();
 			if (!name || name in obj) {
 				return;
 			}
 			obj[name] = null;
 			this.host.rerender();
+		};
+		add.addEventListener("click", commit);
+		nameInput.addEventListener("keydown", (evt) => {
+			if (evt.key === "Enter") {
+				evt.preventDefault();
+				commit();
+			}
 		});
 	}
 

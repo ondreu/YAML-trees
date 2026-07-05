@@ -2,6 +2,8 @@
 main.js
 *.js.map
 tests/*.cjs
+demo/demo.js
+demo/*.png
 
 # dependencies
 node_modules/
