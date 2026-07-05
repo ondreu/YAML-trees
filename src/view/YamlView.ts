@@ -7,7 +7,11 @@ import {
 } from "obsidian";
 import type YamlTreesPlugin from "../main";
 import { VIEW_TYPE_YAML, ICONS, type ViewMode } from "../constants";
-import { parseYaml, serializeYaml } from "../model/YamlDocument";
+import {
+	parseYamlWithMeta,
+	serializeYamlWithMeta,
+} from "../model/YamlDocument";
+import { coerceScalar, formatScalar } from "../model/coerce";
 import { detectShape, collectColumns, isPlainObject } from "../model/shape";
 import { EditorHost, Renderer } from "./Renderer";
 import { TableRenderer } from "./TableRenderer";
@@ -19,6 +23,8 @@ import { exportHtml } from "../export/html";
 import { parseRules, lintRecords, type Diagnostic } from "../lint/lint";
 import { countMatches, replaceAll, type FindOptions } from "../model/find";
 import { collectComponents } from "../model/dedupe";
+import { explodeForExport } from "../model/flatten";
+import { assignIds } from "../model/autoId";
 import { FindReplaceModal } from "./modals/FindReplaceModal";
 import { ComponentsModal } from "./modals/ComponentsModal";
 import { FlattenModal } from "./modals/FlattenModal";
@@ -39,6 +45,10 @@ export class YamlView extends TextFileView implements EditorHost {
 	private readonly plugin: YamlTreesPlugin;
 
 	private model: unknown = undefined;
+	/** Obsidian-style frontmatter (leading `---` map), or null when absent. */
+	private frontmatter: Record<string, unknown> | null = null;
+	private metaVisible = false;
+	private metaEl!: HTMLElement;
 	private mode: ViewMode;
 	private editorEl!: HTMLElement;
 	private ribbonEl!: HTMLElement;
@@ -79,7 +89,7 @@ export class YamlView extends TextFileView implements EditorHost {
 		if (this.parseError !== null) {
 			return this.data;
 		}
-		return serializeYaml(this.model);
+		return serializeYamlWithMeta(this.frontmatter, this.model);
 	}
 
 	setViewData(data: string, clear: boolean): void {
@@ -91,8 +101,9 @@ export class YamlView extends TextFileView implements EditorHost {
 		this.undoStack = [];
 		this.redoStack = [];
 		try {
-			const result = parseYaml(data);
+			const result = parseYamlWithMeta(data);
 			this.model = result.value;
+			this.frontmatter = result.frontmatter;
 			this.lastSnapshot = structuredClone(this.model);
 			this.parseError = null;
 			if (result.hasComments || result.hasAnchors) {
@@ -109,6 +120,7 @@ export class YamlView extends TextFileView implements EditorHost {
 
 	clear(): void {
 		this.model = undefined;
+		this.frontmatter = null;
 		this.parseError = null;
 		this.renderers = {};
 		this.contentEl.empty();
@@ -230,9 +242,12 @@ export class YamlView extends TextFileView implements EditorHost {
 
 		this.ribbonEl = root.createDiv({ cls: "yt-ribbon" });
 		this.buildRibbon();
+		this.metaEl = root.createDiv({ cls: "yt-meta" });
+		this.metaEl.toggle(this.metaVisible);
 		this.lintEl = root.createDiv({ cls: "yt-lint" });
 		this.lintEl.hide();
 		this.editorEl = root.createDiv({ cls: "yt-editor" });
+		if (this.metaVisible) this.renderMeta();
 	}
 
 	/** Build the Excel-style ribbon. Insert/Edit groups appear only in Table mode. */
@@ -300,6 +315,8 @@ export class YamlView extends TextFileView implements EditorHost {
 		const data = this.ribbonGroup("Data");
 		this.ribbonButton(data, "search", "Find", () => this.openFindReplace());
 		this.ribbonButton(data, "layers", "Flatten", () => this.openFlatten());
+		this.ribbonButton(data, "hash", "Auto-ID", () => this.autoId());
+		this.ribbonButton(data, "tags", "Metadata", () => this.toggleMeta());
 		this.ribbonButton(data, "import", "Import", () => this.importFile());
 		this.ribbonButton(data, "circle-check", "Lint", () => this.toggleLint());
 
@@ -389,6 +406,109 @@ export class YamlView extends TextFileView implements EditorHost {
 		if (this.plugin.settings.defaultView === "table" && shape !== "records") {
 			this.mode = shape === "scalar" ? "source" : "form";
 		}
+	}
+
+	// --- Metadata (frontmatter) ------------------------------------------
+
+	private toggleMeta(): void {
+		this.metaVisible = !this.metaVisible;
+		this.metaEl.toggle(this.metaVisible);
+		if (this.metaVisible) this.renderMeta();
+	}
+
+	/** Render the frontmatter editor: a list of key/value property rows. */
+	private renderMeta(): void {
+		if (!this.metaEl) return;
+		this.metaEl.empty();
+
+		const header = this.metaEl.createDiv({ cls: "yt-meta-header" });
+		header.createSpan({ cls: "yt-meta-title", text: "Metadata" });
+		header.createSpan({
+			cls: "yt-meta-hint",
+			text: "Obsidian-style frontmatter, saved as a leading --- block.",
+		});
+
+		const fm = this.frontmatter ?? {};
+		const keys = Object.keys(fm);
+		if (keys.length === 0) {
+			this.metaEl.createDiv({
+				cls: "yt-meta-empty",
+				text: "No properties yet. Add one below.",
+			});
+		}
+
+		for (const key of keys) {
+			this.renderMetaRow(key, fm[key]);
+		}
+
+		// Add-property row.
+		const adder = this.metaEl.createDiv({ cls: "yt-meta-row yt-meta-adder" });
+		const nameInput = adder.createEl("input", {
+			type: "text",
+			cls: "yt-meta-key",
+			attr: { placeholder: "New property", spellcheck: "false" },
+		});
+		const add = adder.createEl("button", { cls: "yt-btn yt-btn-subtle", text: "Add" });
+		const commit = () => {
+			const name = nameInput.value.trim();
+			if (!name) return;
+			const next = { ...(this.frontmatter ?? {}) };
+			if (name in next) return;
+			next[name] = null;
+			this.frontmatter = next;
+			this.requestSave();
+			this.renderMeta();
+		};
+		add.addEventListener("click", commit);
+		nameInput.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				commit();
+			}
+		});
+	}
+
+	private renderMetaRow(key: string, value: unknown): void {
+		const row = this.metaEl.createDiv({ cls: "yt-meta-row" });
+		row.createSpan({ cls: "yt-meta-key-label", text: key });
+
+		if (typeof value === "boolean") {
+			const box = row.createEl("input", { type: "checkbox", cls: "yt-meta-check" });
+			box.checked = value;
+			box.addEventListener("change", () => this.setMeta(key, box.checked));
+		} else {
+			const input = row.createEl("input", {
+				type: "text",
+				cls: "yt-meta-value",
+				attr: { spellcheck: "false" },
+			});
+			input.value = formatScalar(value);
+			if (value === null || value === undefined) input.placeholder = "null";
+			input.addEventListener("change", () => {
+				const before = typeof value;
+				const next = coerceScalar(input.value);
+				this.setMeta(key, next);
+				if (typeof next !== before) this.renderMeta();
+			});
+		}
+
+		const del = row.createSpan({ cls: "yt-icon-btn" });
+		setIcon(del, "trash");
+		del.setAttr("aria-label", "Delete property");
+		del.addEventListener("click", () => {
+			const next = { ...(this.frontmatter ?? {}) };
+			delete next[key];
+			this.frontmatter = Object.keys(next).length > 0 ? next : null;
+			this.requestSave();
+			this.renderMeta();
+		});
+	}
+
+	private setMeta(key: string, value: unknown): void {
+		const next = { ...(this.frontmatter ?? {}) };
+		next[key] = value;
+		this.frontmatter = next;
+		this.requestSave();
 	}
 
 	// --- Lint ------------------------------------------------------------
@@ -484,6 +604,17 @@ export class YamlView extends TextFileView implements EditorHost {
 		}).open();
 	}
 
+	private autoId(): void {
+		const records = asRecords(this.model);
+		if (!records) {
+			new Notice("YAML Databases: Auto-ID needs a list of records.");
+			return;
+		}
+		const n = assignIds(records);
+		this.replaceData(this.model);
+		new Notice(`YAML Databases: assigned ${n} hierarchical ID(s).`);
+	}
+
 	// --- Import ----------------------------------------------------------
 
 	private importFile(): void {
@@ -530,7 +661,9 @@ export class YamlView extends TextFileView implements EditorHost {
 			new Notice("YAML Databases: export needs a list of records.");
 			return null;
 		}
-		return { records, columns: collectColumns(records) };
+		// Sub-assemblies are exploded into indented child rows so a spreadsheet
+		// shows every part on its own line instead of a JSON blob in one cell.
+		return explodeForExport(records);
 	}
 
 	private async exportCsv(): Promise<void> {

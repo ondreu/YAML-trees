@@ -1,4 +1,10 @@
-import { parse, stringify, parseDocument, type ToStringOptions } from "yaml";
+import {
+	parse,
+	stringify,
+	parseDocument,
+	parseAllDocuments,
+	type ToStringOptions,
+} from "yaml";
 
 // Thin wrapper around the `yaml` library that centralises parsing and, most
 // importantly, *deterministic* serialization. The whole point of the plugin is
@@ -59,7 +65,73 @@ export function parseYamlValue(text: string): unknown {
 	return parse(text, { maxAliasCount: -1 });
 }
 
-function documentHasComments(doc: ReturnType<typeof parseDocument>): boolean {
+export interface MetaParseResult extends ParseResult {
+	/**
+	 * Obsidian-style frontmatter: a leading `---` mapping document. Null when the
+	 * file has no frontmatter block. The `value` field holds the body document.
+	 */
+	frontmatter: Record<string, unknown> | null;
+}
+
+function isPlainMap(v: unknown): v is Record<string, unknown> {
+	return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Parse YAML that may carry an Obsidian-style frontmatter block. In a `.yaml`
+ * file this is a leading document mapping fenced by `---`, followed by the body
+ * document — a valid two-document YAML stream:
+ *
+ *     ---
+ *     title: My BOM
+ *     ---
+ *     - part: Bolt
+ *
+ * When no such leading map document is present the whole file is the body and
+ * `frontmatter` is null.
+ */
+export function parseYamlWithMeta(text: string): MetaParseResult {
+	const docs = parseAllDocuments(text);
+	for (const doc of docs) {
+		if (doc.errors.length > 0) throw new Error(doc.errors[0].message);
+	}
+
+	if (docs.length >= 2) {
+		const fm = docs[0].toJS({ maxAliasCount: -1 });
+		if (isPlainMap(fm)) {
+			const body = docs[1].toJS({ maxAliasCount: -1 });
+			return {
+				value: body,
+				frontmatter: fm,
+				hasComments: docs.some((d) => documentHasComments(d)),
+				hasAnchors: /(^|\s)[&*][A-Za-z0-9_-]+/.test(text),
+			};
+		}
+	}
+
+	const single = parseYaml(text);
+	return { ...single, frontmatter: null };
+}
+
+/** Serialize a body value together with optional frontmatter as a YAML stream. */
+export function serializeYamlWithMeta(
+	frontmatter: Record<string, unknown> | null,
+	value: unknown
+): string {
+	const body = serializeYaml(value);
+	if (!frontmatter || Object.keys(frontmatter).length === 0) {
+		return body;
+	}
+	// A two-document stream: the frontmatter map, then the body. `stringify`
+	// already terminates the map with a newline.
+	return "---\n" + stringify(frontmatter, STRINGIFY_OPTIONS) + "---\n" + body;
+}
+
+function documentHasComments(doc: {
+	commentBefore?: string | null;
+	comment?: string | null;
+	contents?: unknown;
+}): boolean {
 	if (doc.commentBefore || doc.comment) {
 		return true;
 	}

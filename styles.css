@@ -277,6 +277,67 @@
 	color: var(--text-warning, var(--text-muted));
 }
 
+/* --- Metadata (frontmatter) panel ------------------------------------- */
+
+.yaml-trees-view .yt-meta {
+	flex: 0 0 auto;
+	max-height: 40%;
+	overflow: auto;
+	padding: var(--size-4-2) var(--size-4-3);
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.yaml-trees-view .yt-meta-header {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.yaml-trees-view .yt-meta-title {
+	font-weight: var(--font-semibold);
+}
+
+.yaml-trees-view .yt-meta-hint,
+.yaml-trees-view .yt-meta-empty {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.yaml-trees-view .yt-meta-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: 3px 0;
+}
+
+.yaml-trees-view .yt-meta-key-label {
+	flex: 0 0 30%;
+	max-width: 240px;
+	font-weight: var(--font-medium);
+	color: var(--text-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.yaml-trees-view .yt-meta-value,
+.yaml-trees-view .yt-meta-key {
+	flex: 1 1 auto;
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.yaml-trees-view .yt-meta-adder {
+	margin-top: var(--size-4-2);
+	padding-top: var(--size-4-2);
+	border-top: 1px dashed var(--background-modifier-border);
+}
+
 /* --- Table controls (filter / sort) ----------------------------------- */
 
 .yaml-trees-view .yt-table-controls {
@@ -419,6 +480,34 @@
 .yaml-trees-view .yt-rownum:hover {
 	color: var(--text-normal);
 	background: var(--background-modifier-hover);
+}
+
+/* Row grabber dots: hidden until the row is hovered, then swapped in for the
+   row number as an obvious drag handle. */
+.yaml-trees-view .yt-row-grip {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-faint);
+	cursor: grab;
+}
+
+.yaml-trees-view .yt-row-grip svg {
+	width: var(--icon-s);
+	height: var(--icon-s);
+}
+
+.yaml-trees-view tbody tr:hover .yt-row-grip {
+	display: inline-flex;
+}
+
+.yaml-trees-view tbody tr:hover .yt-rownum-label {
+	display: none;
+}
+
+.yaml-trees-view .yt-rownum.yt-dragging .yt-row-grip {
+	color: var(--interactive-accent);
+	cursor: grabbing;
 }
 
 /* Corner cell sits above both sticky axes. */
@@ -584,33 +673,59 @@
 
 .yaml-trees-view .yt-subrow-cell {
 	background: var(--background-secondary);
-	padding: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-2) var(--size-4-2) var(--size-4-4);
+	/* An accent rail ties the nested block to its parent row. */
+	box-shadow: inset 3px 0 0 0 var(--interactive-accent);
 }
 
 .yaml-trees-view .yt-subrow-header {
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-2);
-	margin-bottom: var(--size-4-1);
+	margin-bottom: var(--size-4-2);
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
 }
 
+/* The nested table is presented as a self-contained rounded card. */
 .yaml-trees-view .yt-subtable {
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 	font-size: var(--font-ui-smaller);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	overflow: hidden;
+	background: var(--background-primary);
 }
 
 .yaml-trees-view .yt-subtable th,
 .yaml-trees-view .yt-subtable td {
-	border: 1px solid var(--background-modifier-border);
-	padding: 2px var(--size-4-2);
+	border-right: 1px solid var(--background-modifier-border);
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 3px var(--size-4-2);
 	text-align: left;
+}
+
+.yaml-trees-view .yt-subtable tr td:last-child,
+.yaml-trees-view .yt-subtable tr th:last-child {
+	border-right: 0;
+}
+
+.yaml-trees-view .yt-subtable tbody tr:last-child td {
+	border-bottom: 0;
+}
+
+.yaml-trees-view .yt-subtable tbody tr:nth-child(even) td {
+	background: var(--background-secondary);
 }
 
 .yaml-trees-view .yt-subtable thead th {
 	background: var(--background-primary-alt);
 	font-weight: var(--font-semibold);
+	color: var(--text-muted);
 }
 
 /* Totals footer row. */
@@ -832,19 +947,38 @@
 	padding: var(--size-4-1) var(--size-4-2);
 }
 
+/* Nested objects/arrays render as clearly separated cards so groups and
+   components don't visually run together. */
 .yaml-trees-view .yt-group {
-	border-left: 2px solid var(--background-modifier-border);
-	margin: var(--size-4-1) 0;
-	padding-left: var(--size-4-2);
+	margin: var(--size-4-2) 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-primary);
+	overflow: hidden;
+}
+
+/* Nested groups step down in tint so depth reads at a glance. */
+.yaml-trees-view .yt-group .yt-group {
+	background: var(--background-secondary);
 }
 
 .yaml-trees-view .yt-group-header {
 	display: flex;
 	align-items: center;
 	gap: var(--size-4-1);
-	padding: var(--size-4-1) 0;
+	padding: var(--size-4-1) var(--size-4-2);
+	background: var(--background-secondary-alt);
+	border-bottom: 1px solid var(--background-modifier-border);
 	cursor: pointer;
 	user-select: none;
+}
+
+.yaml-trees-view .yt-group.is-collapsed .yt-group-header {
+	border-bottom: 0;
+}
+
+.yaml-trees-view .yt-group-body {
+	padding: var(--size-4-2);
 }
 
 .yaml-trees-view .yt-group-toggle {
@@ -898,25 +1032,76 @@
 	padding: var(--size-4-3);
 }
 
-.yaml-trees-view .yt-source-input {
+/* Editor: a coloured highlight layer with a transparent textarea on top. Both
+   children must share identical text metrics to stay pixel-aligned. */
+.yaml-trees-view .yt-source-editor {
+	position: relative;
 	flex: 1 1 auto;
-	width: 100%;
+	min-height: 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	overflow: hidden;
+}
+
+.yaml-trees-view .yt-source-highlight,
+.yaml-trees-view .yt-source-input {
+	position: absolute;
+	inset: 0;
+	margin: 0;
 	box-sizing: border-box;
-	resize: none;
+	padding: var(--size-4-2);
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-small);
 	line-height: var(--line-height-normal);
 	tab-size: 2;
-	background: var(--background-primary);
-	color: var(--text-normal);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	padding: var(--size-4-2);
+	white-space: pre;
+	word-wrap: normal;
+	overflow-wrap: normal;
+	letter-spacing: 0;
+	border: 0;
 }
 
-.yaml-trees-view .yt-source.has-error .yt-source-input {
+.yaml-trees-view .yt-source-highlight {
+	overflow: hidden;
+	pointer-events: none;
+	color: var(--text-normal);
+	background: transparent;
+}
+
+.yaml-trees-view .yt-source-highlight code {
+	font: inherit;
+	white-space: inherit;
+}
+
+.yaml-trees-view .yt-source-input {
+	resize: none;
+	overflow: auto;
+	color: transparent;
+	caret-color: var(--text-normal);
+	background: transparent;
+	-webkit-text-fill-color: transparent;
+}
+
+.yaml-trees-view .yt-source-input::selection {
+	background: var(--text-selection);
+	-webkit-text-fill-color: transparent;
+}
+
+.yaml-trees-view .yt-source.has-error .yt-source-editor {
 	border-color: var(--text-error);
 }
+
+/* YAML token colours (theme-native). */
+.yaml-trees-view .yt-yl-key { color: var(--color-blue, #4c8dff); }
+.yaml-trees-view .yt-yl-string { color: var(--text-normal); }
+.yaml-trees-view .yt-yl-number { color: var(--color-purple, #a06bff); }
+.yaml-trees-view .yt-yl-bool { color: var(--color-orange, #e08a2b); }
+.yaml-trees-view .yt-yl-null { color: var(--color-red, #d64b4b); }
+.yaml-trees-view .yt-yl-comment { color: var(--text-faint); font-style: italic; }
+.yaml-trees-view .yt-yl-dash,
+.yaml-trees-view .yt-yl-punc { color: var(--text-muted); }
+.yaml-trees-view .yt-yl-marker { color: var(--color-cyan, #38b2ac); font-weight: 600; }
 
 .yaml-trees-view .yt-source-error {
 	margin-bottom: var(--size-4-2);

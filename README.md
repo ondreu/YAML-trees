@@ -23,8 +23,10 @@ single edit produces a single-line change. It works just as well for any YAML.
     rows and columns, and **Excel-style range selection with copy/paste** (TSV).
     Right-click a row number, column header, or cell for insert / move /
     duplicate / delete / clear and per-cell **type** changes.
-  - **Form** — a collapsible, labelled tree for maps and nested data.
-  - **Source** — the raw YAML with live syntax validation as an escape hatch.
+  - **Form** — a collapsible, labelled tree for maps and nested data, with each
+    nested group shown as a clearly separated card.
+  - **Source** — the raw YAML with **live syntax highlighting** and validation as
+    an escape hatch.
 - **Sub-databases (subassemblies)** — a cell can hold a nested list of records;
   **expand** it inline to peek, or **drill in** with a breadcrumb to navigate
   back out. Insert one from the ribbon (Insert -> Sub-table).
@@ -34,6 +36,11 @@ single edit produces a single-line change. It works just as well for any YAML.
   and its sub-assemblies; insert a copy to reuse a block.
 - **Flatten BOM** (Data -> Flatten) — roll quantities up through the sub-assembly
   tree into one parts list and export it as CSV/XLSX.
+- **Auto-ID** (Data -> Auto-ID) — assign nested-friendly hierarchical IDs to
+  every part and sub-assembly part (`1`, `1.1`, `1.2.1`...), the id placed first.
+- **Metadata** (Data -> Metadata) — attach Obsidian-style frontmatter to a
+  database, stored as a leading `---` YAML document ahead of the body (the same
+  style as markdown notes). A plain file with no frontmatter is left untouched.
 - **Totals footer** with column sums, a **frozen first column**, and
   **touch-friendly drag** of row numbers / column handles to reorder.
 - **Sort & filter** (view-only) — click a column's chevron to sort; a filter box
@@ -50,7 +57,9 @@ single edit produces a single-line change. It works just as well for any YAML.
   in settings; results show in a panel from the **Lint** button.
 - **Export** — **CSV**, **XLSX** (no dependency), and a **self-contained HTML**
   file that browses the database (with drill-down, search, and its own
-  CSV/XLSX download) offline, from the toolbar.
+  CSV/XLSX download) offline, from the toolbar. Sub-assemblies are exploded into
+  indented child rows (with a `Level` column) so a spreadsheet shows every part
+  on its own line instead of a JSON blob in one cell.
 - **Create a new database** from the folder context menu (*New YAML database*),
   the command palette, or the ribbon icon.
 - **Git-friendly output** — block style, one value per line, stable key order,
